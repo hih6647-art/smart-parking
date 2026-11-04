@@ -14,7 +14,10 @@
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <!-- 카카오/다음 공식 주소 & 아파트명 검색 API (무료, API 키 불필요, 전국 모든 아파트/건물 100% 지원) -->
-  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <!-- Leaflet 오픈 실시간 지도 라이브러리 (100% 무료, API 키 불필요) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap');
@@ -41,6 +44,29 @@
     }
     .tap-btn { transition: transform 0.1s ease, background-color 0.15s ease; }
     .tap-btn:active { transform: scale(0.97); }
+    .parking-pin-icon {
+      background: #2563EB;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-size: 14px;
+      font-weight: 900;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.45);
+    }
+    .dest-pin-icon {
+      background: #E11D48;
+      color: white;
+      border: 2px solid white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-size: 14px;
+      font-weight: 900;
+      box-shadow: 0 4px 12px rgba(225,29,72,0.45);
+    }
+    .leaflet-container { font-family: inherit; z-index: 10; }
     .ios-scroll { -webkit-overflow-scrolling: touch; }
   </style>
 </head>
@@ -163,6 +189,30 @@
               <span>🏢</span>
               <span class="truncate">아파트명 · 건물명 · 상세주소 정밀 검색창 열기 ↗</span>
             </button>
+          </div>
+        </div>
+
+                <!-- 🗺️ 실시간 그래픽 지도 뷰 (인터랙티브 맵) -->
+        <div id="routeMapCard" class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm relative">
+          <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-base shrink-0">🗺️</span>
+              <span id="mapTitleText" class="text-xs sm:text-sm font-extrabold text-slate-900 truncate">주차 위치 & 실시간 주행 경로 지도</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span id="mapDistBadge" class="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg whitespace-nowrap">주차 위치</span>
+              <button id="recenterMapBtn" type="button" class="tap-btn text-xs font-extrabold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 px-2 py-1 rounded-lg shrink-0">
+                🎯 중심 맞춤
+              </button>
+            </div>
+          </div>
+          <div id="leafletMap" class="w-full h-56 sm:h-64 bg-slate-100 z-0"></div>
+          <div id="mapTrafficLegend" class="flex items-center justify-between px-3.5 py-1.5 bg-white/95 border-t border-slate-100 text-[11px] font-bold text-slate-600">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> 🅿️ 내 차</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block"></span> 🏁 목적지</span>
+            </div>
+            <span class="text-blue-700 font-extrabold text-[10px]">터치하여 자유롭게 확대·이동</span>
           </div>
         </div>
 
@@ -791,6 +841,108 @@
       }, { enableHighAccuracy: true, timeout: 6000 });
     }
 
+    // ==================== [인터랙티브 실시간 그래픽 지도 엔진 (Leaflet)] ====================
+    let leafletMapInstance = null;
+    let startMarkerInstance = null;
+    let destMarkerInstance = null;
+    let routePolylineInstance = null;
+
+    function initLeafletMap() {
+      if (!window.L || leafletMapInstance) return;
+      const mapEl = el('leafletMap');
+      if (!mapEl) return;
+
+      const initLat = state.lat || 37.5665;
+      const initLng = state.lng || 126.9780;
+
+      leafletMapInstance = L.map('leafletMap', {
+        center: [initLat, initLng],
+        zoom: 14,
+        zoomControl: false,
+        attributionControl: false
+      });
+
+      L.control.zoom({ position: 'bottomright' }).addTo(leafletMapInstance);
+
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(leafletMapInstance);
+
+      updateMapParkingMarker();
+
+      // 지도 클릭 시에도 부드럽게 크기 재조정
+      mapEl.addEventListener('click', () => {
+        if (leafletMapInstance) leafletMapInstance.invalidateSize();
+      });
+    }
+
+    function createDivIcon(className, htmlText) {
+      return L.divIcon({
+        className: className,
+        html: htmlText,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+      });
+    }
+
+    function updateMapParkingMarker() {
+      if (!leafletMapInstance) return;
+      const lat = state.lat || 37.5665;
+      const lng = state.lng || 126.9780;
+      const icon = createDivIcon('parking-pin-icon', '🅿️');
+
+      if (startMarkerInstance) {
+        startMarkerInstance.setLatLng([lat, lng]);
+      } else {
+        startMarkerInstance = L.marker([lat, lng], { icon: icon }).addTo(leafletMapInstance);
+      }
+      const label = '<div class="text-xs font-bold leading-snug"><b>🅿️ 내 차 주차 위치</b><br>' +
+        (state.floor || '') + ' ' + (state.zone || '') + '<br>' +
+        (state.address || '') + '</div>';
+      startMarkerInstance.bindPopup(label);
+    }
+
+    function drawRouteOnMap(destLat, destLng, destName, latlngCoords, realKmText, durationText) {
+      if (!leafletMapInstance) initLeafletMap();
+      if (!leafletMapInstance) return;
+
+      leafletMapInstance.invalidateSize();
+
+      // 목적지 마커
+      const destIcon = createDivIcon('dest-pin-icon', '🏁');
+      if (destMarkerInstance) {
+        destMarkerInstance.setLatLng([destLat, destLng]);
+      } else {
+        destMarkerInstance = L.marker([destLat, destLng], { icon: destIcon }).addTo(leafletMapInstance);
+      }
+      destMarkerInstance.bindPopup('<div class="text-xs font-bold leading-snug"><b>🏁 ' + destName + '</b><br>거리: ' + realKmText + ' (' + durationText + ')</div>').openPopup();
+
+      // 기존 경로선 제거 후 도로망 폴리라인 그리기
+      if (routePolylineInstance) {
+        leafletMapInstance.removeLayer(routePolylineInstance);
+        routePolylineInstance = null;
+      }
+
+      if (latlngCoords && latlngCoords.length > 0) {
+        routePolylineInstance = L.polyline(latlngCoords, {
+          color: '#2563EB',
+          weight: 6,
+          opacity: 0.85,
+          lineJoin: 'round',
+          lineCap: 'round'
+        }).addTo(leafletMapInstance);
+
+        leafletMapInstance.fitBounds(routePolylineInstance.getBounds(), { padding: [30, 30] });
+      } else {
+        const bounds = L.latLngBounds([ [state.lat, state.lng], [destLat, destLng] ]);
+        leafletMapInstance.fitBounds(bounds, { padding: [30, 30] });
+      }
+
+      if (el('mapTitleText')) el('mapTitleText').textContent = destName + ' 실시간 경로';
+      if (el('mapDistBadge')) el('mapDistBadge').textContent = realKmText + ' · ' + durationText;
+    }
+
     // 4사 실시간 경로 계산 코어 함수 (즉시 실행 및 모든 내비 카드 반영)
     function executeRouteCalculation(destLat, destLng, destName) {
       state.destLat = destLat;
@@ -824,7 +976,7 @@
       (async () => {
         try {
           const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
-            state.lng + ',' + state.lat + ';' + destLng + ',' + destLat + '?overview=false&steps=true';
+            state.lng + ',' + state.lat + ';' + destLng + ',' + destLat + '?overview=full&geometries=geojson&steps=true';
           const rRes = await fetch(osrmUrl);
           const rData = await rRes.json();
           if (rData && rData.routes && rData.routes[0]) {
@@ -1089,7 +1241,19 @@
     });
 
     // 탭 전환 바인딩
-    on('tabHomeBtn', 'click', () => switchTab('home'));
+          on('recenterMapBtn', 'click', () => {
+        if (!leafletMapInstance) initLeafletMap();
+        if (!leafletMapInstance) return;
+        if (routePolylineInstance) {
+          leafletMapInstance.fitBounds(routePolylineInstance.getBounds(), { padding: [30, 30] });
+        } else if (state.destLat && state.destLng) {
+          const bounds = L.latLngBounds([ [state.lat, state.lng], [state.destLat, state.destLng] ]);
+          leafletMapInstance.fitBounds(bounds, { padding: [30, 30] });
+        } else {
+          leafletMapInstance.setView([state.lat, state.lng], 15);
+        }
+      });
+      on('tabHomeBtn', 'click', () => switchTab('home'));
     on('tabSettingsBtn', 'click', () => switchTab('settings'));
     on('cloudStatusBadgeBtn', 'click', () => switchTab('settings'));
     on('jumpToApiBtn', 'click', () => switchTab('settings'));
@@ -1309,6 +1473,7 @@ on('loadFromDriveBtn', 'click', async () => {
     renderMain();
     renderCacheList();
     fetchRealGPS();
+    setTimeout(initLeafletMap, 400);
   </script>
 </body>
 </html>
