@@ -1177,33 +1177,40 @@
     });
 
     // 구글 앱스 스크립트 URL 저장 및 연결 테스트
-    on('saveGoogleApiBtn', 'click', () => {
-      state.googleApiUrl = el('googleApiUrlInput') ? el('googleApiUrlInput').value.trim() : DEFAULT_GAS_URL;
-      saveState();
-      renderMain();
-      showToast('💾 구글 드라이브 동기화 URL이 저장되었습니다.');
-    });
+          on('saveGoogleApiBtn', 'click', async () => {
+        state.googleApiUrl = el('googleApiUrlInput') ? el('googleApiUrlInput').value.trim() : DEFAULT_GAS_URL;
+        saveState();
+        renderMain();
+        showToast('💾 URL 저장 완료! 구글 서버 연결을 확인합니다...');
+        const res = await callGasBackend({ action: 'ping' });
+        if (res && res.status === 'success') {
+          updateCloudBadge(true, '구글 정상 연결됨');
+          showToast('✅ 구글 앱스 스크립트 서버 정상 연결 확인!');
+        } else {
+          updateCloudBadge(false, '구글 배포 확인 필요');
+          showToast('⚠️ 구글 서버 응답 없음: [액세스: 모든 사용자] 설정 및 [새 배포] 웹앱 URL인지 확인해 주세요.');
+        }
+      });
 
-    on('testGoogleApiBtn', 'click', async () => {
-      const url = el('googleApiUrlInput') ? el('googleApiUrlInput').value.trim() : '';
-      if (!url) {
-        showToast('⚠️ 먼저 구글 앱스 스크립트 웹 앱 URL을 입력해 주세요.');
-        return;
-      }
-      state.googleApiUrl = url;
-      saveState();
-      showToast('⏳ 구글 클라우드 서버 확인 중...');
-      const res = await callGasBackend({ action: 'ping' });
-      if (res && res.status === 'success') {
-        updateCloudBadge(true, '구글 정상 연결됨');
-        showToast('✅ 구글 앱스 스크립트 서버 정상 연결 확인!');
-      } else {
-        updateCloudBadge(false, '구글 새 버전 배포 필요');
-        showToast('ℹ️ 구글 스크립트 편집기에서 [새 버전 배포]를 완료해 주세요.');
-      }
-    });
-
-    on('loadFromDriveBtn', 'click', async () => {
+      on('testGoogleApiBtn', 'click', async () => {
+        const url = el('googleApiUrlInput') ? el('googleApiUrlInput').value.trim() : '';
+        if (!url) {
+          showToast('⚠️ 먼저 구글 앱스 스크립트 웹앱 URL을 입력해 주세요.');
+          return;
+        }
+        state.googleApiUrl = url;
+        saveState();
+        showToast('☁️ 구글 클라우드 서버 신호 확인 중...');
+        const res = await callGasBackend({ action: 'ping' });
+        if (res && res.status === 'success') {
+          updateCloudBadge(true, '구글 정상 연결됨');
+          showToast('✅ 구글 앱스 스크립트 서버 정상 연결 확인!');
+        } else {
+          updateCloudBadge(false, '구글 배포 확인 필요');
+          showToast('⚠️ 구글 서버 연결 실패: 구글 스크립트에서 [액세스 권한: 모든 사용자]로 새 배포를 완료했는지 확인해 주세요.');
+        }
+      });
+on('loadFromDriveBtn', 'click', async () => {
       showToast('⏳ 구글 드라이브에서 최신 주차 상태를 찾는 중...');
       const res = await callGasBackend({ action: 'loadParking' });
       if (res && res.status === 'success' && res.data) {
