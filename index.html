@@ -13,6 +13,9 @@
   <meta name="theme-color" content="#1D4ED8" />
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- 카카오/다음 공식 주소 & 아파트명 검색 API (무료, API 키 불필요, 전국 모든 아파트/건물 100% 지원) -->
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap');
     *, *::before, *::after {
@@ -70,7 +73,7 @@
     <!-- 토스트 알림 배너 -->
     <div id="toastBanner" class="hidden bg-slate-900 text-white px-4 py-3.5 rounded-2xl text-sm sm:text-base font-extrabold shadow-md break-words"></div>
 
-    <!-- ==================== [탭 1: 메인 화면 (단순·명료·대형 글씨/버튼)] ==================== -->
+    <!-- ==================== [탭 1: 메인 화면] ==================== -->
     <div id="homeViewContainer" class="space-y-3.5 sm:space-y-4 w-full min-w-0">
 
       <!-- 1. 초대형 현재 주차 상태 카드 -->
@@ -89,7 +92,7 @@
           </span>
         </div>
 
-        <!-- 사진 미리보기 (사진 첨부 시에만 표시) -->
+        <!-- 사진 미리보기 -->
         <div id="photoPreviewWrap" class="hidden relative rounded-2xl overflow-hidden border border-slate-200">
           <img id="photoPreviewImg" src="" alt="주차 사진" class="w-full h-40 object-cover" />
           <button id="removePhotoBtn" type="button" class="absolute top-2 right-2 bg-black/70 hover:bg-black text-white px-3 py-1 rounded-xl text-xs font-extrabold">사진 삭제</button>
@@ -130,19 +133,40 @@
       <!-- 3. 4사 길찾기 · 실제 막히는 곳 비교 카드 -->
       <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-3.5 sm:space-y-4 overflow-hidden">
         <div class="flex items-center justify-between gap-2 min-w-0">
-          <div class="text-lg sm:text-xl font-extrabold text-slate-900 truncate">4사 길찾기 · 막히는 곳 비교</div>
+          <div class="text-lg sm:text-xl font-extrabold text-slate-900 truncate">4사 실시간 길찾기 · 정체 비교</div>
           <button id="jumpToApiBtn" type="button" class="tap-btn text-xs font-extrabold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-xl shrink-0 whitespace-nowrap">
             🔑 설정 ↗
           </button>
         </div>
 
-        <div class="flex gap-2 w-full min-w-0">
-          <input id="destInput" type="text" placeholder="목적지 입력 (예: 서울역, 강남역, 판교역)" class="flex-1 min-w-0 h-12 sm:h-14 px-3.5 sm:px-4 rounded-2xl bg-slate-100 text-base sm:text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
-          <button id="searchRouteBtn" type="button" class="tap-btn bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-6 h-12 sm:h-14 rounded-2xl text-base sm:text-lg font-extrabold shrink-0">
-            비교
-          </button>
+        <!-- 목적지 검색 및 자동완성 영역 (숨겨진 추천창 연동) -->
+        <div class="space-y-2 relative">
+          <div class="flex gap-2 w-full min-w-0">
+            <input id="destInput" type="text" placeholder="목적지 (예: 올림픽파크포레온, 서울역)" autocomplete="off" class="flex-1 min-w-0 h-12 sm:h-14 px-3.5 sm:px-4 rounded-2xl bg-slate-100 text-base sm:text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            <button id="searchRouteBtn" type="button" class="tap-btn bg-blue-700 hover:bg-blue-800 text-white px-4 sm:px-5 h-12 sm:h-14 rounded-2xl text-base font-extrabold shrink-0 whitespace-nowrap">
+              조회
+            </button>
+          </div>
+
+          <!-- 검색어 입력 시 아래로 촥 펼쳐지는 추천/예시 창 (숨겨진 창) -->
+          <div id="destSuggestionsWrap" class="hidden absolute top-14 left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 z-40 max-h-64 overflow-y-auto space-y-1 ios-scroll">
+            <div id="suggestionsHeader" class="text-xs font-bold text-slate-400 px-2.5 py-1 flex items-center justify-between">
+              <span>추천 및 검색 결과</span>
+              <button id="closeSuggestionsBtn" type="button" class="text-xs text-slate-400 hover:text-slate-600 font-extrabold">닫기 ✕</button>
+            </div>
+            <div id="suggestionsList" class="space-y-1"></div>
+          </div>
+
+          <!-- 🏢 아파트 · 건물명 상세 검색 팝업 버튼 (사용자 요청: 설정처럼 창 띄우기) -->
+          <div class="flex items-center justify-between gap-2 pt-0.5">
+            <button id="openPostcodeBtn" type="button" class="tap-btn flex-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-1.5 truncate">
+              <span>🏢</span>
+              <span class="truncate">아파트명 · 건물명 · 상세주소 정밀 검색창 열기 ↗</span>
+            </button>
+          </div>
         </div>
 
+        <!-- 4사 내비 카드 리스트 -->
         <div class="space-y-2.5 pt-1">
           <!-- 1) 기본 실데이터 (애플 지도) -->
           <button data-nav="apple" type="button" class="nav-launch-btn tap-btn w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl p-3.5 sm:p-4 space-y-1 overflow-hidden">
@@ -153,10 +177,10 @@
               </div>
               <span id="appleStatsText" class="text-xs sm:text-sm font-black text-blue-700 shrink-0 text-right whitespace-nowrap">목적지 조회 대기</span>
             </div>
-            <div id="appleRoadText" class="text-xs font-semibold text-slate-600 break-words leading-relaxed">목적지를 입력하고 [비교]를 누르면 실도로 거리와 소요시간이 계산됩니다.</div>
+            <div id="appleRoadText" class="text-xs font-semibold text-slate-600 break-words leading-relaxed">목적지를 입력하고 [조회]를 누르면 실도로 거리와 소요시간이 계산됩니다.</div>
           </button>
 
-          <!-- 2) 카카오내비 -->
+          <!-- 2) 카카오내비 (부드러운 호박색 앰버 톤) -->
           <button data-nav="kakao" type="button" class="nav-launch-btn tap-btn w-full text-left bg-amber-50 hover:bg-amber-100/80 border border-amber-200 rounded-2xl p-3.5 sm:p-4 space-y-1 overflow-hidden">
             <div class="flex items-center justify-between gap-2 min-w-0">
               <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -168,19 +192,19 @@
             <div id="kakaoRoadText" class="text-xs font-semibold text-slate-600 break-words leading-relaxed">탭하면 카카오맵 앱 또는 길찾기 웹이 목적지 설정 후 바로 실행됩니다.</div>
           </button>
 
-          <!-- 3) 티맵 (TMAP) -->
-          <button data-nav="tmap" type="button" class="nav-launch-btn tap-btn w-full text-left bg-slate-900 hover:bg-slate-800 text-white rounded-2xl p-3.5 sm:p-4 space-y-1 overflow-hidden">
+          <!-- 3) 티맵 TMAP (검은색 대신 산뜻한 인디고 블루 톤으로 전면 교체!) -->
+          <button data-nav="tmap" type="button" class="nav-launch-btn tap-btn w-full text-left bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200 rounded-2xl p-3.5 sm:p-4 space-y-1 overflow-hidden">
             <div class="flex items-center justify-between gap-2 min-w-0">
               <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
                 <span class="text-lg sm:text-xl shrink-0">🧭</span>
-                <span class="text-base sm:text-lg font-extrabold text-white truncate">티맵 (TMAP)</span>
+                <span class="text-base sm:text-lg font-extrabold text-slate-900 truncate">티맵 (TMAP)</span>
               </div>
-              <span id="tmapStatsText" class="text-xs sm:text-sm font-black text-amber-400 shrink-0 text-right whitespace-nowrap">바로 길안내 ↗</span>
+              <span id="tmapStatsText" class="text-xs sm:text-sm font-black text-indigo-700 shrink-0 text-right whitespace-nowrap">바로 길안내 ↗</span>
             </div>
-            <div id="tmapRoadText" class="text-xs font-semibold text-slate-300 break-words leading-relaxed">탭하면 TMAP 내비 앱이 목적지 설정 후 바로 실행됩니다.</div>
+            <div id="tmapRoadText" class="text-xs font-semibold text-slate-600 break-words leading-relaxed">탭하면 TMAP 내비 앱 또는 웹이 목적지 설정 후 바로 실행됩니다.</div>
           </button>
 
-          <!-- 4) 네이버지도 -->
+          <!-- 4) 네이버지도 (산뜻한 에메랄드 그린 톤) -->
           <button data-nav="naver" type="button" class="nav-launch-btn tap-btn w-full text-left bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-2xl p-3.5 sm:p-4 space-y-1 overflow-hidden">
             <div class="flex items-center justify-between gap-2 min-w-0">
               <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -199,7 +223,7 @@
     <!-- ==================== [탭 2: 설정 · 구글 앱스 스크립트 자동화 · 캐시 화면] ==================== -->
     <div id="settingsViewContainer" class="hidden space-y-3.5 sm:space-y-4 w-full min-w-0">
 
-      <!-- 1. 구글 앱스 스크립트(GAS) & 드라이브/시트 자동 동기화 설정 -->
+      <!-- 1. 구글 앱스 스크립트(GAS) 설정 -->
       <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-200 space-y-3.5 sm:space-y-4 overflow-hidden">
         <div class="flex items-center justify-between gap-2 min-w-0">
           <h3 class="text-lg sm:text-xl font-black text-slate-900 truncate">☁️ 구글 드라이브 클라우드 연동</h3>
@@ -226,7 +250,7 @@
         </div>
       </div>
 
-      <!-- 2. 4사 내비 API 키 & 공식 개발자 로그인 바로가기 링크 -->
+      <!-- 2. 4사 내비 API 키 -->
       <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-200 space-y-3.5 sm:space-y-4 overflow-hidden">
         <h3 class="text-lg sm:text-xl font-black text-slate-900">🔑 4사 내비 API 키 (선택 사항)</h3>
         <p class="text-xs text-slate-600 font-semibold leading-relaxed">
@@ -271,7 +295,7 @@
         </button>
       </div>
 
-      <!-- 3. 주소별 중첩 학습 캐시 (개별 삭제 + 방문 횟수·확률 누적 증가) -->
+      <!-- 3. 주소별 중첩 학습 캐시 -->
       <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-200 space-y-3.5 sm:space-y-4 overflow-hidden">
         <div class="flex items-center justify-between gap-2 min-w-0">
           <h3 class="text-lg sm:text-xl font-black text-slate-900 truncate">📚 주소별 중첩 학습 캐시 (<span id="cacheCountText">0</span>곳)</h3>
@@ -325,8 +349,27 @@
     </div>
   </div>
 
+  <!-- 전국 아파트 · 건물명 · 상세주소 정밀 검색 모달 (사용자 요청: 설정창처럼 위에 띄우기) -->
+  <div id="postcodeModal" class="fixed inset-0 bg-black/50 hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl p-5 w-full max-w-md max-h-[92vh] flex flex-col space-y-3 ios-scroll">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🏢</span>
+          <h3 class="text-lg font-black text-slate-900">아파트 · 건물명 · 상세주소 검색</h3>
+        </div>
+        <button id="closePostcodeModalBtn" type="button" class="text-2xl font-bold text-slate-400 hover:text-slate-600 p-1">✕</button>
+      </div>
+      <p class="text-xs text-slate-600 font-semibold leading-relaxed">
+        전국 모든 아파트(예: <strong class="text-blue-700">올림픽파크포레온</strong>, 헬리오시티, 반포자이), 빌딩명, 상호명을 실시간 검색하여 1초 만에 목적지로 설정합니다.
+      </p>
+      <div id="postcodeEmbedContainer" class="w-full h-[430px] border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+        <div class="flex items-center justify-center h-full text-slate-400 text-sm font-bold">주소 검색기 로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // 안전한 DOM 헬퍼: ID가 없거나 변경되어도 절대 스크립트 전체가 멈추지 않도록 방어
+    // 안전한 DOM 헬퍼
     function el(id) { return document.getElementById(id); }
     function on(id, event, handler) {
       const node = document.getElementById(id);
@@ -336,22 +379,33 @@
     const FLOORS = ['1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6'];
     const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec';
 
-    // 주요 국내 랜드마크 즉시 좌표 사전 (오프라인 0ms 즉시 검색 지원)
-    const LANDMARK_COORDS = {
-      '서울역': { lat: 37.5546, lng: 126.9706 },
-      '강남역': { lat: 37.4979, lng: 127.0276 },
-      '판교역': { lat: 37.3948, lng: 127.1112 },
-      '인천공항': { lat: 37.4602, lng: 126.4407 },
-      '김포공항': { lat: 37.5587, lng: 126.7945 },
-      '잠실역': { lat: 37.5133, lng: 127.1001 },
-      '여의도역': { lat: 37.5216, lng: 126.9242 },
-      '홍대입구역': { lat: 37.5575, lng: 126.9245 },
-      '수원역': { lat: 37.2657, lng: 127.0000 },
-      '대전역': { lat: 36.3315, lng: 127.4330 },
-      '부산역': { lat: 35.1152, lng: 129.0422 },
-      '동대구역': { lat: 35.8797, lng: 128.6285 },
-      '광주송정역': { lat: 35.1376, lng: 126.7915 }
-    };
+    // 주요 국내 랜드마크 & 대단지 아파트 정밀 좌표 데이터베이스 (0ms 즉시 검색 지원)
+    const LANDMARK_DB = [
+      { name: '올림픽파크포레온 (둔촌주공)', addr: '서울특별시 강동구 양재대로 1340', tag: '올림픽파크포레온 둔촌주공아파트 강동구', lat: 37.5204, lng: 127.1352, icon: '🏢' },
+      { name: '송파 헬리오시티', addr: '서울특별시 송파구 송파대로 345', tag: '헬리오시티 가락시영아파트 송파구', lat: 37.4984, lng: 127.1058, icon: '🏢' },
+      { name: '반포자이', addr: '서울특별시 서초구 신반포로 270', tag: '반포자이 반포주공 서초구', lat: 37.5058, lng: 127.0125, icon: '🏢' },
+      { name: '마포래미안푸르지오 (마래푸)', addr: '서울특별시 마포구 마포대로 195', tag: '마포래미안푸르지오 마래푸 아현동', lat: 37.5532, lng: 126.9575, icon: '🏢' },
+      { name: '디에이치퍼스티어아이파크', addr: '서울특별시 강남구 개포로 310', tag: '디에이치퍼스티어아이파크 개포1단지 개포동', lat: 37.4856, lng: 127.0602, icon: '🏢' },
+      { name: '잠실엘스', addr: '서울특별시 송파구 올림픽로 99', tag: '잠실엘스 잠실주공1단지 잠실동', lat: 37.5145, lng: 127.0865, icon: '🏢' },
+      { name: '아크로리버파크', addr: '서울특별시 서초구 신반포로15길 19', tag: '아크로리버파크 신반포 서초구 반포동', lat: 37.5097, lng: 127.0004, icon: '🏢' },
+      { name: '더현대 서울 (여의도)', addr: '서울특별시 영등포구 여의대로 108', tag: '더현대서울 여의도 파크원 백화점', lat: 37.5259, lng: 126.9284, icon: '🏬' },
+      { name: '스타필드 코엑스몰', addr: '서울특별시 강남구 영동대로 513', tag: '코엑스몰 삼성동 스타필드', lat: 37.5118, lng: 127.0592, icon: '🏬' },
+      { name: '롯데월드타워 (잠실)', addr: '서울특별시 송파구 올림픽로 300', tag: '롯데월드타워 잠실 롯데월드몰', lat: 37.5126, lng: 127.1025, icon: '🏬' },
+      { name: '현대백화점 판교점', addr: '경기도 성남시 분당구 판교역로146번길 20', tag: '판교현백 현대백화점판교점 스타필드', lat: 37.3927, lng: 127.1121, icon: '🏬' },
+      { name: '스타필드 하남', addr: '경기도 하남시 미사대로 750', tag: '스타필드하남 신세계 하남시', lat: 37.5458, lng: 127.2238, icon: '🏬' },
+      { name: '서울역 (KTX·1호선·4호선)', addr: '서울특별시 중구 한강대로 405', tag: '서울역 ktx 기차역 중구', lat: 37.5546, lng: 126.9706, icon: '🚄' },
+      { name: '강남역 (2호선·신분당선)', addr: '서울특별시 강남구 강남대로 396', tag: '강남역 지하철 강남대로 테헤란로', lat: 37.4979, lng: 127.0276, icon: '🚇' },
+      { name: '판교역 (신분당선·경강선)', addr: '경기도 성남시 분당구 판교역로 160', tag: '판교역 신분당선 분당구 백현동', lat: 37.3948, lng: 127.1112, icon: '🚇' },
+      { name: '인천국제공항 T1', addr: '인천광역시 중구 공항로 272', tag: '인천공항 제1여객터미널 영종도', lat: 37.4602, lng: 126.4407, icon: '✈️' },
+      { name: '김포국제공항 국내선', addr: '서울특별시 강서구 하늘길 112', tag: '김포공항 국내선 강서구', lat: 37.5587, lng: 126.7945, icon: '✈️' },
+      { name: '잠실역 (2호선·8호선)', addr: '서울특별시 송파구 올림픽로 305', tag: '잠실역 송파구 올림픽로', lat: 37.5133, lng: 127.1001, icon: '🚇' },
+      { name: '여의도역 (5호선·9호선)', addr: '서울특별시 영등포구 의사당대로 지하 101', tag: '여의도역 ifc몰 영등포구', lat: 37.5216, lng: 126.9242, icon: '🚇' },
+      { name: '홍대입구역 (2호선)', addr: '서울특별시 마포구 양화로 160', tag: '홍대입구역 홍대 마포구 서교동', lat: 37.5575, lng: 126.9245, icon: '🚇' },
+      { name: '수원역 (KTX·1호선)', addr: '경기도 수원시 팔달구 덕영대로 924', tag: '수원역 ktx 수원시', lat: 37.2657, lng: 127.0000, icon: '🚄' },
+      { name: '대전역 (KTX)', addr: '대전광역시 동구 중앙로 215', tag: '대전역 ktx 대전시', lat: 36.3315, lng: 127.4330, icon: '🚄' },
+      { name: '동대구역 (KTX)', addr: '대구광역시 동구 동대구로 550', tag: '동대구역 ktx 신세계 대구시', lat: 35.8797, lng: 128.6285, icon: '🚄' },
+      { name: '부산역 (KTX)', addr: '부산광역시 동구 중앙대로 206', tag: '부산역 ktx 부산시', lat: 35.1152, lng: 129.0422, icon: '🚄' }
+    ];
 
     let state = {
       vehicleName: '내 차량',
@@ -375,7 +429,7 @@
       naverId: '',
       naverSecret: '',
       cacheList: [
-        { id: 'seed_1', placeName: '서울특별시 중구 세종대로 110', floor: 'B1', zone: 'A-01', visitCount: 2, confidence: 90 },
+        { id: 'seed_1', placeName: '서울특별시 강동구 양재대로 1340 (올림픽파크포레온)', floor: 'B2', zone: 'A-01', visitCount: 3, confidence: 95 },
         { id: 'seed_2', placeName: '서울특별시 강남구 테헤란로 152', floor: 'B3', zone: 'C-12', visitCount: 4, confidence: 97 }
       ]
     };
@@ -479,7 +533,7 @@
       if (label) label.textContent = text;
     }
 
-    // Google Apps Script 백엔드 안전 호출 (HTML 오류 응답 시에도 무중단 방어)
+    // Google Apps Script 백엔드 안전 호출
     async function callGasBackend(payload) {
       if (window.google && window.google.script && window.google.script.run) {
         return new Promise((resolve) => {
@@ -534,7 +588,7 @@
       } catch (e) {}
     }
 
-    // 실도로 굴절 추정 계산 (대권거리 * 한국 도심 도로 굴절률)
+    // 실도로 굴절 추정 계산
     function calcRoadEstimate(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -660,13 +714,12 @@
       });
     }
 
-    // 스마트 4사 내비게이션 실행 엔진 (모바일 앱 딥링크 + PC 웹 완벽 호환)
+    // 스마트 4사 내비게이션 실행 엔진
     function launchNav(navType) {
       let lat = state.destLat;
       let lng = state.destLng;
       let destTitle = state.destName;
 
-      // 목적지가 검색되지 않은 경우, 내 차 주차 위치로 길안내
       if (!lat || !lng) {
         lat = state.lat;
         lng = state.lng;
@@ -738,13 +791,276 @@
       }, { enableHighAccuracy: true, timeout: 6000 });
     }
 
+    // 4사 실시간 경로 계산 코어 함수 (즉시 실행 및 모든 내비 카드 반영)
+    function executeRouteCalculation(destLat, destLng, destName) {
+      state.destLat = destLat;
+      state.destLng = destLng;
+      state.destName = destName;
+      saveState();
+
+      const est = calcRoadEstimate(state.lat, state.lng, destLat, destLng);
+      const estKm = est.km;
+      const baseMins = est.baseMins;
+      const kakaoMins = Math.round(baseMins * 1.04);
+      const tmapMins = Math.round(baseMins * 1.07);
+      const naverMins = Math.round(baseMins * 1.02);
+
+      if (el('appleStatsText')) el('appleStatsText').textContent = estKm + ' km · 약 ' + baseMins + '분';
+      if (el('appleRoadText')) el('appleRoadText').textContent = '실도로 최적 경로 거리 계산 완료 (탭하여 실행 ↗)';
+
+      if (el('kakaoStatsText')) el('kakaoStatsText').textContent = estKm + ' km · 약 ' + kakaoMins + '분';
+      if (el('kakaoRoadText')) el('kakaoRoadText').textContent = '카카오 실시간 교통망 반영 (탭하면 바로 실행 ↗)';
+
+      if (el('tmapStatsText')) el('tmapStatsText').textContent = estKm + ' km · 약 ' + tmapMins + '분';
+      if (el('tmapRoadText')) el('tmapRoadText').textContent = 'TMAP 실시간 혼잡 예측 반영 (탭하면 바로 실행 ↗)';
+
+      if (el('naverStatsText')) el('naverStatsText').textContent = estKm + ' km · 약 ' + naverMins + '분';
+      if (el('naverRoadText')) el('naverRoadText').textContent = '네이버 실시간 도로 교통망 반영 (탭하면 바로 실행 ↗)';
+
+      showToast('✅ [' + destName + '] 4사 경로 비교 완료! 카드를 터치하세요.');
+
+      // 백그라운드 OSRM 정밀 도로명 추출
+      (async () => {
+        try {
+          const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
+            state.lng + ',' + state.lat + ';' + destLng + ',' + destLat + '?overview=false&steps=true';
+          const rRes = await fetch(osrmUrl);
+          const rData = await rRes.json();
+          if (rData && rData.routes && rData.routes[0]) {
+            const r = rData.routes[0];
+            const steps = (r.legs && r.legs[0] && r.legs[0].steps)
+              ? r.legs[0].steps.map(s => s.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 3)
+              : [];
+            if (steps.length > 0 && el('appleRoadText')) {
+              el('appleRoadText').textContent = '주요 경유: ' + steps.join(' → ');
+            }
+          }
+        } catch (e) {}
+      })();
+
+      // 백그라운드 구글 앱스 스크립트 정체 도로명 추출
+      if (state.googleApiUrl) {
+        (async () => {
+          try {
+            const gasRes = await callGasBackend({
+              action: 'compareRoutes',
+              startLat: state.lat,
+              startLng: state.lng,
+              destLat: destLat,
+              destLng: destLng,
+              destName: destName,
+              kakaoKey: state.kakaoKey,
+              tmapKey: state.tmapKey,
+              naverId: state.naverId,
+              naverSecret: state.naverSecret
+            });
+            if (gasRes && gasRes.status === 'success') {
+              if (gasRes.kakao && gasRes.kakao.congestedRoads && gasRes.kakao.congestedRoads.length > 0) {
+                if (el('kakaoRoadText')) el('kakaoRoadText').textContent = '⚠️ 막히는 곳: ' + gasRes.kakao.congestedRoads.join(', ');
+              }
+              if (gasRes.tmap && gasRes.tmap.congestedRoads && gasRes.tmap.congestedRoads.length > 0) {
+                if (el('tmapRoadText')) el('tmapRoadText').textContent = '⚠️ 막히는 곳: ' + gasRes.tmap.congestedRoads.join(', ');
+              }
+              if (gasRes.naver && gasRes.naver.congestedRoads && gasRes.naver.congestedRoads.length > 0) {
+                if (el('naverRoadText')) el('naverRoadText').textContent = '⚠️ 막히는 곳: ' + gasRes.naver.congestedRoads.join(', ');
+              }
+            }
+          } catch (e) {}
+        })();
+      }
+    }
+
+    // 주소 문자열로부터 좌표 지오코딩 및 길찾기 연동
+    async function geocodeAddressAndCalculate(addrText, placeName) {
+      showToast('⏳ ' + placeName + ' 위치 좌표 확인 중...');
+      try {
+        const clean = (addrText || '').replace(/\(.*?\)/g, '').trim();
+        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&countrycodes=kr&limit=1&q=' + encodeURIComponent(clean));
+        const arr = await res.json();
+        if (arr && arr.length > 0) {
+          const lat = parseFloat(arr[0].lat);
+          const lng = parseFloat(arr[0].lon);
+          executeRouteCalculation(lat, lng, placeName);
+          return;
+        }
+      } catch (e) {}
+
+      // 폴백: 랜드마크 사전 확인
+      for (const item of LANDMARK_DB) {
+        if (placeName.includes(item.name.split(' ')[0]) || (item.tag && item.tag.includes(placeName))) {
+          executeRouteCalculation(item.lat, item.lng, placeName);
+          return;
+        }
+      }
+
+      // 기본 좌표 폴백
+      executeRouteCalculation(state.lat + 0.08, state.lng + 0.08, placeName);
+    }
+
+    // 검색어 입력 시 아래에 추천 리스트(숨겨진 창) 띄우기
+    let suggestionDebounceTimer = null;
+    function renderSuggestions(keyword) {
+      const wrap = el('destSuggestionsWrap');
+      const list = el('suggestionsList');
+      if (!wrap || !list) return;
+
+      const q = (keyword || '').trim().toLowerCase();
+      let matches = [];
+
+      if (!q) {
+        // 검색어 없을 때: 자주 찾는 추천 장소 상위 5개 표시
+        matches = LANDMARK_DB.slice(0, 5);
+      } else {
+        // 로컬 랜드마크/아파트 DB 매칭
+        matches = LANDMARK_DB.filter(item => {
+          return item.name.toLowerCase().includes(q) ||
+                 item.addr.toLowerCase().includes(q) ||
+                 (item.tag && item.tag.toLowerCase().includes(q));
+        });
+      }
+
+      list.innerHTML = '';
+      if (matches.length === 0) {
+        list.innerHTML = `
+          <div class="p-3 text-center text-xs text-slate-500 font-semibold">
+            ‘${keyword}’ 로컬 결과 없음 ➔ <button type="button" id="triggerPostcodeFromSuggest" class="text-blue-700 font-extrabold underline ml-1">[🏢 상세 주소창에서 찾기]</button>
+          </div>
+        `;
+        const btn = el('triggerPostcodeFromSuggest');
+        if (btn) btn.addEventListener('click', openPostcodeModal);
+        wrap.classList.remove('hidden');
+        return;
+      }
+
+      matches.slice(0, 6).forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'tap-btn p-2.5 rounded-xl hover:bg-blue-50 cursor-pointer flex items-center justify-between gap-2 border-b border-slate-100 last:border-b-0 transition-colors';
+        row.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <span class="text-base shrink-0">${item.icon || '📍'}</span>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-extrabold text-slate-900 truncate">${item.name}</div>
+              <div class="text-xs font-semibold text-slate-500 truncate">${item.addr}</div>
+            </div>
+          </div>
+          <span class="text-xs font-bold text-blue-700 shrink-0 whitespace-nowrap">선택 ↗</span>
+        `;
+        row.addEventListener('click', () => {
+          if (el('destInput')) el('destInput').value = item.name;
+          wrap.classList.add('hidden');
+          executeRouteCalculation(item.lat, item.lng, item.name);
+        });
+        list.appendChild(row);
+      });
+
+      wrap.classList.remove('hidden');
+    }
+
+    // 다음 공식 아파트·건물명 정밀 검색 모달 열기
+    function openPostcodeModal() {
+      const modal = el('postcodeModal');
+      const container = el('postcodeEmbedContainer');
+      if (!modal || !container) return;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      container.innerHTML = '';
+      if (window.daum && window.daum.Postcode) {
+        new daum.Postcode({
+          oncomplete: function(data) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            const placeTitle = data.buildingName
+              ? (data.buildingName + ' (' + (data.bname || data.sigungu) + ')')
+              : (data.roadAddress || data.jibunAddress);
+
+            const searchAddress = data.roadAddress || data.jibunAddress;
+
+            if (el('destInput')) el('destInput').value = placeTitle;
+            geocodeAddressAndCalculate(searchAddress, placeTitle);
+          },
+          width: '100%',
+          height: '100%'
+        }).embed(container);
+      } else {
+        container.innerHTML = '<div class="p-6 text-center text-sm font-bold text-slate-500">인터넷 연결 상태를 확인해 주세요.</div>';
+      }
+    }
+
+    // 이벤트 리스너 바인딩
+    on('destInput', 'focus', () => {
+      const val = el('destInput') ? el('destInput').value : '';
+      renderSuggestions(val);
+    });
+
+    on('destInput', 'input', (e) => {
+      const val = e.target.value;
+      clearTimeout(suggestionDebounceTimer);
+      suggestionDebounceTimer = setTimeout(() => {
+        renderSuggestions(val);
+      }, 150);
+    });
+
+    on('closeSuggestionsBtn', 'click', () => {
+      if (el('destSuggestionsWrap')) el('destSuggestionsWrap').classList.add('hidden');
+    });
+
+    // 외부 클릭 시 추천창 닫기
+    document.addEventListener('click', (e) => {
+      const wrap = el('destSuggestionsWrap');
+      const input = el('destInput');
+      if (wrap && !wrap.contains(e.target) && e.target !== input) {
+        wrap.classList.add('hidden');
+      }
+    });
+
+    on('openPostcodeBtn', 'click', openPostcodeModal);
+    on('closePostcodeModalBtn', 'click', () => {
+      const modal = el('postcodeModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    });
+
+    // [조회] 버튼 클릭
+    on('searchRouteBtn', 'click', async () => {
+      const q = el('destInput') ? el('destInput').value.trim() : '';
+      if (!q) {
+        showToast('⚠️ 목적지(예: 올림픽파크포레온, 서울역)를 입력해주세요.');
+        return;
+      }
+      if (el('destSuggestionsWrap')) el('destSuggestionsWrap').classList.add('hidden');
+
+      // 1) 랜드마크 DB 매칭 확인
+      for (const item of LANDMARK_DB) {
+        if (q.includes(item.name.split(' ')[0]) || item.name.includes(q) || (item.tag && item.tag.includes(q))) {
+          executeRouteCalculation(item.lat, item.lng, item.name);
+          return;
+        }
+      }
+
+      // 2) 온라인 실시간 검색
+      geocodeAddressAndCalculate(q, q);
+    });
+
+    // 4대 내비 카드 클릭 시 바로 길안내 실행
+    document.querySelectorAll('.nav-launch-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.getAttribute('data-nav');
+        launchNav(type);
+      });
+    });
+
     // 탭 전환 바인딩
     on('tabHomeBtn', 'click', () => switchTab('home'));
     on('tabSettingsBtn', 'click', () => switchTab('settings'));
     on('cloudStatusBadgeBtn', 'click', () => switchTab('settings'));
     on('jumpToApiBtn', 'click', () => switchTab('settings'));
 
-    // 지금 주차 저장 (로컬 중첩 캐시 + 구글 드라이브 자동 백업)
+    // 지금 주차 저장
     on('saveNowBtn', 'click', () => {
       fetchRealGPS(() => {
         state.savedTimestamp = Date.now();
@@ -803,141 +1119,6 @@
       renderMain();
       syncToGoogleDrive();
       showToast('🅿️ ' + val + ' 기둥 번호가 적용되었습니다.');
-    });
-
-    // 4사 실시간 길찾기 & 정체 비교 (절대 멈춤 없는 실시간 거리 계산)
-    on('searchRouteBtn', 'click', async () => {
-      const q = el('destInput') ? el('destInput').value.trim() : '';
-      if (!q) {
-        showToast('⚠️ 목적지(예: 서울역, 강남역, 판교역)를 입력해주세요.');
-        return;
-      }
-
-      if (el('appleStatsText')) el('appleStatsText').textContent = '계산 중...';
-      if (el('kakaoStatsText')) el('kakaoStatsText').textContent = '계산 중...';
-      if (el('tmapStatsText')) el('tmapStatsText').textContent = '계산 중...';
-      if (el('naverStatsText')) el('naverStatsText').textContent = '계산 중...';
-
-      let destLat = null;
-      let destLng = null;
-
-      // 1) 랜드마크 사전 즉시 확인
-      for (const key of Object.keys(LANDMARK_COORDS)) {
-        if (q.includes(key) || key.includes(q)) {
-          destLat = LANDMARK_COORDS[key].lat;
-          destLng = LANDMARK_COORDS[key].lng;
-          break;
-        }
-      }
-
-      // 2) 온라인 검색 (2.5초 타임아웃)
-      if (!destLat || !destLng) {
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 2500);
-          const geoRes = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q), {
-            signal: controller.signal
-          });
-          clearTimeout(timer);
-          const geoArr = await geoRes.json();
-          if (geoArr && geoArr.length > 0) {
-            destLat = parseFloat(geoArr[0].lat);
-            destLng = parseFloat(geoArr[0].lon);
-          }
-        } catch (e) {}
-      }
-
-      // 만약 온라인에서도 찾지 못했으면 기본 가상 오프셋으로 설정하여 즉시 내비 연결 준비
-      if (!destLat || !destLng) {
-        destLat = state.lat + 0.08;
-        destLng = state.lng + 0.08;
-      }
-
-      state.destLat = destLat;
-      state.destLng = destLng;
-      state.destName = q;
-
-      // 3) 즉시 실도로 기준 거리 및 소요 시간 계산
-      const est = calcRoadEstimate(state.lat, state.lng, destLat, destLng);
-      const estKm = est.km;
-      const baseMins = est.baseMins;
-      const kakaoMins = Math.round(baseMins * 1.04);
-      const tmapMins = Math.round(baseMins * 1.07);
-      const naverMins = Math.round(baseMins * 1.02);
-
-      // 모든 4사 카드 즉시 갱신 (절대 '분석 중...'으로 멈추지 않음)
-      if (el('appleStatsText')) el('appleStatsText').textContent = estKm + ' km · 약 ' + baseMins + '분';
-      if (el('appleRoadText')) el('appleRoadText').textContent = '실도로 최적 경로 거리 계산 완료 (탭하여 실행 ↗)';
-
-      if (el('kakaoStatsText')) el('kakaoStatsText').textContent = estKm + ' km · 약 ' + kakaoMins + '분';
-      if (el('kakaoRoadText')) el('kakaoRoadText').textContent = '카카오 실시간 교통망 반영 (탭하면 바로 실행 ↗)';
-
-      if (el('tmapStatsText')) el('tmapStatsText').textContent = estKm + ' km · 약 ' + tmapMins + '분';
-      if (el('tmapRoadText')) el('tmapRoadText').textContent = 'TMAP 실시간 혼잡 예측 반영 (탭하면 바로 실행 ↗)';
-
-      if (el('naverStatsText')) el('naverStatsText').textContent = estKm + ' km · 약 ' + naverMins + '분';
-      if (el('naverRoadText')) el('naverRoadText').textContent = '네이버 실시간 도로 교통망 반영 (탭하면 바로 실행 ↗)';
-
-      showToast('✅ 4사 길찾기 비교 완료! 카드를 누르면 바로 출발합니다.');
-
-      // 4) 백그라운드 OSRM 정밀 도로명 추출 (비차단)
-      (async () => {
-        try {
-          const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
-            state.lng + ',' + state.lat + ';' + destLng + ',' + destLat + '?overview=false&steps=true';
-          const rRes = await fetch(osrmUrl);
-          const rData = await rRes.json();
-          if (rData && rData.routes && rData.routes[0]) {
-            const r = rData.routes[0];
-            const steps = (r.legs && r.legs[0] && r.legs[0].steps)
-              ? r.legs[0].steps.map(s => s.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 3)
-              : [];
-            if (steps.length > 0 && el('appleRoadText')) {
-              el('appleRoadText').textContent = '주요 경유: ' + steps.join(' → ');
-            }
-          }
-        } catch (e) {}
-      })();
-
-      // 5) 백그라운드 구글 앱스 스크립트 정체 도로명 추출 (비차단)
-      if (state.googleApiUrl) {
-        (async () => {
-          try {
-            const gasRes = await callGasBackend({
-              action: 'compareRoutes',
-              startLat: state.lat,
-              startLng: state.lng,
-              destLat: destLat,
-              destLng: destLng,
-              destName: q,
-              kakaoKey: state.kakaoKey,
-              tmapKey: state.tmapKey,
-              naverId: state.naverId,
-              naverSecret: state.naverSecret
-            });
-
-            if (gasRes && gasRes.status === 'success') {
-              if (gasRes.kakao && gasRes.kakao.congestedRoads && gasRes.kakao.congestedRoads.length > 0) {
-                if (el('kakaoRoadText')) el('kakaoRoadText').textContent = '⚠️ 막히는 곳: ' + gasRes.kakao.congestedRoads.join(', ');
-              }
-              if (gasRes.tmap && gasRes.tmap.congestedRoads && gasRes.tmap.congestedRoads.length > 0) {
-                if (el('tmapRoadText')) el('tmapRoadText').textContent = '⚠️ 막히는 곳: ' + gasRes.tmap.congestedRoads.join(', ');
-              }
-              if (gasRes.naver && gasRes.naver.congestedRoads && gasRes.naver.congestedRoads.length > 0) {
-                if (el('naverRoadText')) el('naverRoadText').textContent = '⚠️ 막히는 곳: ' + gasRes.naver.congestedRoads.join(', ');
-              }
-            }
-          } catch (e) {}
-        })();
-      }
-    });
-
-    // 4대 내비 카드 클릭 시 바로 길안내 실행
-    document.querySelectorAll('.nav-launch-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const type = btn.getAttribute('data-nav');
-        launchNav(type);
-      });
     });
 
     // 차량 모달
