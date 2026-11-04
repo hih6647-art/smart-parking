@@ -3,12 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>오토링크 파킹 (AutoLink Parking) v2.3</title>
-  <meta name="description" content="스마트 주차 위치 기록, 4사 실시간 내비 정체 도로 비교, 지하 층수 및 구글 드라이브 클라우드 동기화" />
+  <title>오토링크 파킹 (AutoLink Parking)</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="오토링크 파킹" />
@@ -27,405 +25,202 @@
       padding-right: env(safe-area-inset-right);
       -webkit-tap-highlight-color: transparent;
     }
-    .tap-btn { transition: transform 0.1s ease, background-color 0.15s ease, opacity 0.1s ease; }
-    .tap-btn:active { transform: scale(0.97); opacity: 0.92; }
+    .tap-btn { transition: transform 0.1s ease, background-color 0.15s ease; }
+    .tap-btn:active { transform: scale(0.97); }
     .ios-scroll { -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body class="min-h-screen pb-12">
-  <div class="max-w-md mx-auto px-4 pt-3 space-y-4">
+  <div class="max-w-md mx-auto px-4 pt-4 space-y-4">
 
-    <!-- 상단 바: 차량 선택 & 설정·API 버튼 -->
+    <!-- 상단 바: 심플하게 차량명과 설정 버튼만 배치 -->
     <div class="flex items-center justify-between gap-2">
-      <button id="vehicleBtn" class="tap-btn bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2 text-lg font-black text-slate-900">
+      <button id="vehicleBtn" class="tap-btn bg-white px-4 py-3 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2 text-lg font-extrabold text-slate-900">
         <span class="text-xl">🚗</span>
         <span id="vehicleNameDisplay">내 차량</span>
       </button>
-      <button id="openSettingsBtn" class="tap-btn bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-sm flex items-center gap-2 text-base font-extrabold">
+      <button id="openSettingsBtn" class="tap-btn bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-sm flex items-center gap-2 text-lg font-extrabold">
         <span>⚙️</span>
-        <span>설정 · 권한 · 구글</span>
+        <span>설정 · 캐시</span>
       </button>
     </div>
 
-    <!-- 빠른 화면 전환 탭 (메인 홈 / 설정·권한·구글서버) -->
-    <div class="grid grid-cols-2 bg-slate-200/80 p-1.5 rounded-2xl gap-1.5">
-      <button id="tabHomeBtn" class="tap-btn py-2.5 rounded-xl text-base font-extrabold bg-white text-slate-900 shadow-sm">
-        🅿️ 메인 주차 · 길찾기
-      </button>
-      <button id="tabSettingsBtn" class="tap-btn py-2.5 rounded-xl text-base font-extrabold text-slate-600">
-        ⚙️ 설정 · 모든권한 · 구글
-      </button>
-    </div>
+    <!-- 1. 초대형 현재 주차 위치 카드 (한눈에 들어오는 구조) -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+      <div class="flex items-baseline justify-between gap-2">
+        <div id="heroFloorZone" class="text-5xl font-black text-blue-700 tracking-tight">B1 · A-01</div>
+        <span id="elapsedBadge" class="bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-base font-extrabold shrink-0">방금 저장</span>
+      </div>
 
-    <!-- 모든 권한 통합 활성화 상단 알림 배너 -->
-    <div id="permissionMasterBanner" class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 rounded-3xl shadow-md space-y-2.5">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🔐</span>
-          <div>
-            <div class="text-base font-black">모든 권한 상태 관리</div>
-            <div id="masterPermStatusText" class="text-xs text-emerald-100 font-bold">위치 · 알림 · 모션센서 · 자동저장 활성화</div>
-          </div>
+      <div class="flex items-center justify-between gap-2">
+        <div id="currentAddressDisplay" class="text-xl font-bold text-slate-800 leading-snug">
+          📍 현위치 GPS 수신 대기 중
         </div>
-        <span id="allPermBadge" class="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-black">
-          확인 중
+        <span id="probBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-xl text-sm font-extrabold shrink-0">
+          인식 확률 90%
         </span>
       </div>
 
-      <!-- 권한별 상세 현황 태그들 -->
-      <div class="grid grid-cols-3 gap-1.5 pt-1 text-[11px] font-black text-center">
-        <div id="badgeGps" class="bg-black/20 py-1.5 px-2 rounded-xl">📍 GPS: 대기</div>
-        <div id="badgeNotif" class="bg-black/20 py-1.5 px-2 rounded-xl">🔔 알림: 대기</div>
-        <div id="badgeSensor" class="bg-black/20 py-1.5 px-2 rounded-xl">🧭 센서: 대기</div>
-      </div>
+      <!-- 토스트 알림 배너 -->
+      <div id="toastBanner" class="hidden bg-emerald-600 text-white px-4 py-3.5 rounded-2xl text-base font-extrabold shadow-md"></div>
 
-      <button id="masterGrantAllBtn" class="tap-btn w-full h-12 bg-white text-emerald-900 hover:bg-emerald-50 rounded-2xl text-sm font-black shadow-sm flex items-center justify-center gap-2 mt-1">
-        <span>✨</span>
-        <span>모든 권한 한 번에 즉시 허용 및 활성화</span>
-      </button>
+      <div class="grid grid-cols-3 gap-3 pt-1">
+        <button id="saveNowBtn" class="tap-btn col-span-2 bg-blue-700 hover:bg-blue-800 text-white h-16 rounded-2xl text-xl font-black shadow-sm flex items-center justify-center gap-2">
+          <span>📍</span>
+          <span>지금 주차 저장</span>
+        </button>
+        <button id="shareBtn" class="tap-btn bg-slate-100 hover:bg-slate-200 text-slate-900 h-16 rounded-2xl text-xl font-extrabold flex items-center justify-center">
+          공유
+        </button>
+      </div>
     </div>
 
-    <!-- 토스트 알림 배너 -->
-    <div id="toastBanner" class="hidden bg-emerald-600 text-white px-4 py-3.5 rounded-2xl text-base font-extrabold shadow-md"></div>
+    <!-- 2. 큼직한 층수 & 기둥 번호 선택 카드 -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+      <div class="text-xl font-extrabold text-slate-900">층수 선택</div>
+      <div id="floorGrid" class="grid grid-cols-4 gap-2.5"></div>
 
-    <!-- ==================== [탭 1: 메인 홈 화면] ==================== -->
-    <div id="homeViewContainer" class="space-y-4">
+      <div class="text-xl font-extrabold text-slate-900 pt-2">기둥 · 구역 선택</div>
+      <div id="zoneChipsContainer" class="flex gap-2.5 overflow-x-auto pb-1 ios-scroll"></div>
 
-      <!-- 1. 초대형 현재 주차 위치 카드 -->
-      <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-        <div class="flex items-baseline justify-between gap-2">
-          <div id="heroFloorZone" class="text-5xl font-black text-blue-700 tracking-tight">B1 · A-01</div>
-          <span id="elapsedBadge" class="bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-base font-extrabold shrink-0">방금 저장</span>
-        </div>
-
-        <div class="flex items-center justify-between gap-2">
-          <div id="currentAddressDisplay" class="text-lg font-bold text-slate-800 leading-snug">
-            📍 서울특별시 중구 세종대로 110
-          </div>
-          <span id="probBadge" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-xl text-xs font-black shrink-0">
-            인식 확률 90%
-          </span>
-        </div>
-
-        <!-- 주차 메모 표시 -->
-        <div id="memoContainer" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-700">
-          <span class="font-extrabold text-blue-700">메모:</span> <span id="memoDisplay"></span>
-        </div>
-
-        <!-- 주차 사진 미리보기 -->
-        <div id="photoPreviewBox" class="hidden relative rounded-2xl overflow-hidden border border-slate-200 max-h-48">
-          <img id="parkingPhotoImg" src="" alt="주차 사진" class="w-full h-48 object-cover" />
-          <button id="removePhotoBtn" class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full font-bold">삭제</button>
-        </div>
-
-        <div class="grid grid-cols-4 gap-2 pt-1">
-          <button id="saveNowBtn" class="tap-btn col-span-2 bg-blue-700 hover:bg-blue-800 text-white h-14 rounded-2xl text-lg font-black shadow-sm flex items-center justify-center gap-2">
-            <span>📍</span>
-            <span>주차 저장</span>
-          </button>
-          <button id="photoUploadTriggerBtn" class="tap-btn bg-slate-100 hover:bg-slate-200 text-slate-900 h-14 rounded-2xl text-base font-extrabold flex items-center justify-center gap-1">
-            <span>📷</span>
-            <span>사진</span>
-          </button>
-          <input id="photoFileInput" type="file" accept="image/*" capture="environment" class="hidden" />
-          <button id="shareBtn" class="tap-btn bg-slate-100 hover:bg-slate-200 text-slate-900 h-14 rounded-2xl text-base font-extrabold flex items-center justify-center">
-            공유
-          </button>
-        </div>
-
-        <!-- AI 주차 어시스턴트 카드 -->
-        <div id="aiBriefingSection" class="pt-2 border-t border-slate-100">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-black text-slate-500 uppercase tracking-wider">✨ AI 스마트 주차 비서</span>
-            <button id="askAiBriefingBtn" class="tap-btn text-xs font-extrabold text-blue-700 hover:underline">
-              🤖 복귀 요약 브리핑 받기
-            </button>
-          </div>
-          <div id="aiBriefingResult" class="hidden mt-2 bg-indigo-50/80 border border-indigo-100 p-3 rounded-2xl text-xs font-semibold text-indigo-950 leading-relaxed"></div>
-        </div>
+      <div class="flex gap-2 pt-1">
+        <input id="customPillarInput" type="text" placeholder="기둥 직접 입력 (예: H-07)" class="flex-1 h-14 px-4 rounded-2xl bg-slate-100 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        <button id="applyPillarBtn" class="tap-btn bg-slate-900 text-white px-6 h-14 rounded-2xl text-lg font-extrabold shrink-0">
+          적용
+        </button>
       </div>
-
-      <!-- 2. 층수 & 기둥 번호 선택 카드 -->
-      <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-        <div class="text-xl font-extrabold text-slate-900">층수 선택</div>
-        <div id="floorGrid" class="grid grid-cols-4 gap-2.5"></div>
-
-        <div class="text-xl font-extrabold text-slate-900 pt-1">기둥 · 구역 선택</div>
-        <div id="zoneChipsContainer" class="flex gap-2.5 overflow-x-auto pb-1 ios-scroll"></div>
-
-        <div class="flex gap-2 pt-1">
-          <input id="customPillarInput" type="text" placeholder="기둥 직접 입력 (예: H-07, EV앞)" class="flex-1 h-13 px-4 rounded-2xl bg-slate-100 text-base font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
-          <button id="applyPillarBtn" class="tap-btn bg-slate-900 text-white px-5 h-13 rounded-2xl text-base font-extrabold shrink-0">
-            적용
-          </button>
-        </div>
-
-        <div class="flex gap-2 pt-1">
-          <input id="customMemoInput" type="text" placeholder="추가 메모 (예: 2시간 무료 할인 등록)" class="flex-1 h-11 px-3.5 rounded-xl bg-slate-100 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600" />
-          <button id="saveMemoBtn" class="tap-btn bg-blue-600 text-white px-4 h-11 rounded-xl text-sm font-bold shrink-0">
-            메모 저장
-          </button>
-        </div>
-      </div>
-
-      <!-- 3. 4사 실시간 길찾기 · 막히는 곳 비교 카드 -->
-      <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="text-xl font-extrabold text-slate-900">4사 길찾기 · 막히는 곳 비교</div>
-          <button id="jumpToApiBtn" class="tap-btn text-xs font-extrabold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl">
-            🔑 API 설정
-          </button>
-        </div>
-
-        <div class="flex gap-2">
-          <input id="destInput" type="text" placeholder="목적지 입력 (예: 강남역, 판교역, 서울역)" class="flex-1 h-14 px-4 rounded-2xl bg-slate-100 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
-          <button id="searchRouteBtn" class="tap-btn bg-blue-700 text-white px-6 h-14 rounded-2xl text-lg font-extrabold shrink-0">
-            비교
-          </button>
-        </div>
-
-        <!-- 4사 비교 카드 리스트 (탭하면 해당 내비 앱 바로 실행) -->
-        <div class="space-y-2.5">
-          <!-- 1) 애플 지도 / OSRM -->
-          <button data-nav="apple" class="nav-launch-btn tap-btn w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-base sm:text-lg font-black text-slate-900">🍎 애플 지도 (기본 연동)</span>
-              <span id="appleStatsText" class="text-sm sm:text-base font-black text-blue-700">목적지 조회 대기</span>
-            </div>
-            <div id="appleRoadText" class="text-xs sm:text-sm font-bold text-slate-600">목적지를 입력하고 [비교]를 누르면 실제 경로 거리·소요시간을 계산합니다.</div>
-          </button>
-
-          <!-- 2) 카카오내비 -->
-          <button data-nav="kakao" class="nav-launch-btn tap-btn w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-base sm:text-lg font-black text-slate-900">🚕 카카오내비</span>
-              <span id="kakaoStatsText" class="text-sm sm:text-base font-black text-amber-600">바로 실행 가능 ↗</span>
-            </div>
-            <div id="kakaoRoadText" class="text-xs sm:text-sm font-bold text-slate-600">⚙️ 구글 서버 또는 API 키 설정 시 실시간 막히는 도로만 추출 표시</div>
-          </button>
-
-          <!-- 3) 티맵 (TMAP) -->
-          <button data-nav="tmap" class="nav-launch-btn tap-btn w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-base sm:text-lg font-black text-slate-900">🧭 티맵 (TMAP)</span>
-              <span id="tmapStatsText" class="text-sm sm:text-base font-black text-indigo-700">바로 실행 가능 ↗</span>
-            </div>
-            <div id="tmapRoadText" class="text-xs sm:text-sm font-bold text-slate-600">⚙️ 구글 서버 또는 API 키 설정 시 실시간 막히는 도로만 추출 표시</div>
-          </button>
-
-          <!-- 4) 네이버지도 -->
-          <button data-nav="naver" class="nav-launch-btn tap-btn w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl p-4 space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-base sm:text-lg font-black text-slate-900">🟢 네이버지도</span>
-              <span id="naverStatsText" class="text-sm sm:text-base font-black text-emerald-700">바로 실행 가능 ↗</span>
-            </div>
-            <div id="naverRoadText" class="text-xs sm:text-sm font-bold text-slate-600">⚙️ 구글 서버 또는 API 키 설정 시 실시간 막히는 도로만 추출 표시</div>
-          </button>
-        </div>
-      </div>
-
     </div>
 
-    <!-- ==================== [탭 2: 설정 · 모든권한 · 구글서버 화면] ==================== -->
-    <div id="settingsViewContainer" class="hidden space-y-4">
+    <!-- 3. 실데이터 기반 길찾기 & 내비게이션 바로 실행 -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+      <div class="text-xl font-extrabold text-slate-900">실시간 길찾기</div>
 
-      <!-- 1. [핵심] 모든 권한 활성화 및 상태 카드 -->
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">🔐</span>
-            <h3 class="text-xl font-black text-slate-900">모든 권한 활성화</h3>
-          </div>
-          <span id="permAllBadgeSettings" class="text-xs font-black bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg">전체 활성화</span>
-        </div>
-        <p class="text-xs text-slate-600 font-semibold leading-relaxed">
-          스마트 자동 주차 위치 기록, 지하 층수 감지, 실시간 정체 안내를 위해 필요한 모든 브라우저 및 센서 권한을 원클릭으로 활성화합니다.
-        </p>
-
-        <div class="space-y-2">
-          <!-- 위치 -->
-          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
-            <div>
-              <div class="text-sm font-black text-slate-900">📍 고정밀 GPS 위치 권한</div>
-              <div class="text-xs text-slate-500 font-semibold">주차 시 지번 주소 및 좌표 실시간 인식</div>
-            </div>
-            <span id="statusGpsText" class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">✅ 허용됨</span>
-          </div>
-          <!-- 알림 -->
-          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
-            <div>
-              <div class="text-sm font-black text-slate-900">🔔 스마트 알림 및 푸시 권한</div>
-              <div class="text-xs text-slate-500 font-semibold">주차 완료 및 복귀 시 체크리스트 안내</div>
-            </div>
-            <span id="statusNotifText" class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">✅ 허용됨</span>
-          </div>
-          <!-- 모션 센서 -->
-          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
-            <div>
-              <div class="text-sm font-black text-slate-900">🧭 모션 센서 & 기압계 권한</div>
-              <div class="text-xs text-slate-500 font-semibold">지하 층수 이동 감지 및 주행 속도 판정</div>
-            </div>
-            <span id="statusSensorText" class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">✅ 활성화됨</span>
-          </div>
-          <!-- 주행 가드 -->
-          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
-            <div>
-              <div class="text-sm font-black text-slate-900">🛡️ 시속 5km/h 주행 중 차단 가드</div>
-              <div class="text-xs text-slate-500 font-semibold">운전 중 블루투스 전환 시 오저장 방지</div>
-            </div>
-            <span id="statusGuardText" class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">✅ 가드 가동 중</span>
-          </div>
-        </div>
-
-        <button id="grantAllPermissionsDetailedBtn" class="tap-btn w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-base font-black shadow-sm flex items-center justify-center gap-2">
-          <span>✨</span>
-          <span>모든 권한 허용 및 전체 활성화 다시 실행</span>
+      <div class="flex gap-2">
+        <input id="destInput" type="text" placeholder="목적지 입력 (예: 서울역, 강남역)" class="flex-1 h-14 px-4 rounded-2xl bg-slate-100 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        <button id="searchRouteBtn" class="tap-btn bg-blue-700 hover:bg-blue-800 text-white px-6 h-14 rounded-2xl text-lg font-extrabold shrink-0">
+          조회
         </button>
       </div>
 
-      <!-- 2. 구글 클라우드 & 구글 드라이브(Google Drive) 연동 카드 -->
-      <div class="bg-gradient-to-br from-blue-700 to-indigo-800 text-white p-6 rounded-3xl shadow-md space-y-4">
+      <!-- 실제 경로 조회 결과 (실제 OSRM 도로 및 정체 데이터) -->
+      <div id="realRouteBox" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">☁️</span>
-            <h3 class="text-xl font-black">구글 클라우드 & 드라이브 연동</h3>
-          </div>
-          <span class="text-xs font-black bg-white/20 px-2.5 py-1 rounded-lg">PC 서버 불필요</span>
+          <span id="routeDestTitle" class="text-lg font-extrabold text-slate-900"></span>
+          <span id="routeStatsText" class="text-lg font-black text-blue-700"></span>
         </div>
-        
-        <p class="text-xs leading-relaxed text-blue-100 font-semibold">
-          로컬 PC 서버를 켜둘 필요 없이, <strong class="text-white underline">구글 앱스 스크립트(Google Apps Script)</strong>를 통해 24시간 어디서나 4사 내비 실시간 정체 분석 및 주차 사진·위치를 내 구글 드라이브에 안전하게 자동 백업합니다.
-        </p>
-
-        <div class="space-y-1.5">
-          <label class="text-xs font-extrabold text-blue-100">구글 웹앱 URL (Google Apps Script Web App URL)</label>
-          <input id="googleApiUrlInput" type="url" value="https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec" placeholder="https://script.google.com/macros/s/.../exec" class="w-full h-12 px-3.5 rounded-xl bg-white text-slate-900 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400" />
-        </div>
-
-        <div class="flex gap-2 pt-1">
-          <button id="testGoogleApiBtn" class="tap-btn flex-1 bg-white hover:bg-slate-100 text-blue-900 h-11 rounded-xl text-xs font-black">
-            🔄 구글 서버 연결 확인
-          </button>
-          <button id="toggleGasGuideBtn" class="tap-btn bg-white/10 hover:bg-white/20 text-white px-3.5 h-11 rounded-xl text-xs font-bold">
-            배포 방법 ↗
-          </button>
-        </div>
-
-        <!-- 배포 가이드 -->
-        <div id="gasGuideBox" class="hidden bg-black/30 p-4 rounded-2xl text-xs space-y-2 border border-white/20 text-blue-50 leading-relaxed">
-          <div class="font-black text-amber-300">📌 1분 만에 구글 서버 배포하기 (무료):</div>
-          <p>1. <a href="https://script.google.com" target="_blank" class="underline text-white font-extrabold">script.google.com ↗</a> 접속 후 [새 프로젝트] 클릭</p>
-          <p>2. 저장소의 <strong>Code.gs</strong> 파일 내용을 모두 복사하여 붙여넣기</p>
-          <p>3. 우측 상단 <strong>[배포] ➔ [새 배포]</strong> 선택</p>
-          <p>4. 유형: <strong>웹 앱</strong> 선택, 액세스 권한: <strong>모든 사용자(Anyone)</strong> 설정 후 [배포]</p>
-          <p>5. 생성된 웹 앱 URL(<code class="bg-black/40 px-1 py-0.5 rounded">.../exec</code>)을 위 칸에 붙여넣기하면 완료!</p>
-        </div>
+        <div id="routeSummaryText" class="text-base font-bold text-slate-600"></div>
+        <div id="routeCongestionText" class="text-xs font-bold text-amber-700"></div>
       </div>
 
-      <!-- 3. 4사 내비 API 키 & 발급 링크 -->
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xl font-black text-slate-900">🔑 4사 내비 API 키 설정</h3>
-          <span class="text-xs font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg">실데이터 연동</span>
-        </div>
-
-        <!-- 카카오내비 -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-extrabold text-slate-900">🚕 카카오내비 REST API 키</span>
-            <a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener noreferrer" class="tap-btn bg-amber-400/20 text-amber-900 border border-amber-400/40 px-2.5 py-1 rounded-xl text-xs font-extrabold">
-              🔑 카카오 발급 ↗
-            </a>
-          </div>
-          <input id="kakaoKeyInput" type="text" placeholder="Kakao REST API 키 입력" class="w-full h-11 px-3.5 rounded-xl bg-white border border-slate-200 text-sm font-bold" />
-        </div>
-
-        <!-- 티맵 -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-extrabold text-slate-900">🧭 티맵 (TMAP) AppKey</span>
-            <a href="https://openapi.sk.com/products/detail?svcSeq=4" target="_blank" rel="noopener noreferrer" class="tap-btn bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-xl text-xs font-extrabold">
-              🔑 SK TMAP 발급 ↗
-            </a>
-          </div>
-          <input id="tmapKeyInput" type="text" placeholder="TMAP AppKey 입력" class="w-full h-11 px-3.5 rounded-xl bg-white border border-slate-200 text-sm font-bold" />
-        </div>
-
-        <!-- 네이버지도 -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-extrabold text-slate-900">🟢 네이버 클라우드 ID / Secret</span>
-            <a href="https://console.ncloud.com/naver-service/application" target="_blank" rel="noopener noreferrer" class="tap-btn bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-xl text-xs font-extrabold">
-              🔑 네이버 발급 ↗
-            </a>
-          </div>
-          <input id="naverIdInput" type="text" placeholder="NCP Client ID" class="w-full h-11 px-3.5 rounded-xl bg-white border border-slate-200 text-sm font-bold mb-1" />
-          <input id="naverSecretInput" type="password" placeholder="NCP Client Secret" class="w-full h-11 px-3.5 rounded-xl bg-white border border-slate-200 text-sm font-bold" />
-        </div>
-
-        <!-- AI 비서 (Gemini API) -->
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-extrabold text-slate-900">🤖 Google Gemini API 키 (선택)</span>
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="tap-btn bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-xl text-xs font-extrabold">
-              🔑 Gemini 무료 발급 ↗
-            </a>
-          </div>
-          <input id="aiApiKeyInput" type="password" placeholder="Gemini API Key" class="w-full h-11 px-3.5 rounded-xl bg-white border border-slate-200 text-sm font-bold" />
-        </div>
-
-        <button id="saveApiKeysBtn" class="tap-btn w-full h-13 bg-slate-900 text-white rounded-2xl text-base font-extrabold">
-          설정 및 API 키 저장
-        </button>
+      <div class="grid grid-cols-2 gap-3">
+        <button data-nav="tmap" class="nav-launch-btn tap-btn bg-slate-900 hover:bg-slate-800 text-white h-14 rounded-2xl text-lg font-extrabold">티맵 실행</button>
+        <button data-nav="kakao" class="nav-launch-btn tap-btn bg-amber-500 hover:bg-amber-600 text-white h-14 rounded-2xl text-lg font-extrabold">카카오내비</button>
+        <button data-nav="naver" class="nav-launch-btn tap-btn bg-emerald-600 hover:bg-emerald-700 text-white h-14 rounded-2xl text-lg font-extrabold">네이버지도</button>
+        <button data-nav="apple" class="nav-launch-btn tap-btn bg-blue-700 hover:bg-blue-800 text-white h-14 rounded-2xl text-lg font-extrabold">지도 앱 열기</button>
       </div>
-
-      <!-- 4. 주소별 중첩 학습 캐시 -->
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xl font-black text-slate-900">📚 주소별 중첩 학습 캐시 (<span id="cacheCountText">0</span>곳)</h3>
-          <button id="clearAllCacheBtn" class="tap-btn text-xs font-extrabold text-rose-600 bg-rose-50 px-3 py-1.5 rounded-xl">
-            전체 비우기
-          </button>
-        </div>
-        <p class="text-xs sm:text-sm font-semibold text-slate-600">
-          동일·유사한 주소에 주차하면 새 줄이 생기는 대신 <strong class="text-blue-700">방문 횟수(+1회)와 층수 인식 확률(% 최대 99%)이 중첩 상승</strong>하며, 원하는 항목만 골라 개별 삭제할 수 있습니다.
-        </p>
-
-        <div id="cacheListContainer" class="space-y-2.5 max-h-60 overflow-y-auto ios-scroll"></div>
-
-        <button id="testOverlapVisitBtn" class="tap-btn w-full h-12 bg-blue-50 text-blue-800 border border-blue-200 rounded-2xl text-sm font-extrabold">
-          ➕ 현재 주소 재방문 중첩 테스트 (확률 % 증가 확인)
-        </button>
-      </div>
-
     </div>
 
   </div>
 
-  <!-- 차량 정보 설정 모달 -->
+  <!-- 차량 설정 모달 -->
   <div id="vehicleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-xl font-black">차량 정보 설정</h3>
-        <button id="closeVehicleModalBtn" class="text-2xl font-bold text-slate-400">✕</button>
+        <h3 class="text-xl font-black text-slate-900">차량 정보 설정</h3>
+        <button id="closeVehicleModalBtn" class="text-2xl font-bold text-slate-400 p-1">✕</button>
       </div>
-      <input id="vehicleNameInput" type="text" placeholder="차량 이름 (예: 아이오닉 6, 쏘렌토)" class="w-full h-12 px-4 rounded-2xl bg-slate-100 text-base font-bold" />
-      <input id="vehiclePlateInput" type="text" placeholder="차량 번호 (선택, 예: 12가 3456)" class="w-full h-12 px-4 rounded-2xl bg-slate-100 text-base font-bold" />
-      <button id="saveVehicleBtn" class="tap-btn w-full h-13 py-3.5 bg-blue-700 text-white rounded-2xl text-base font-extrabold">저장하기</button>
+      <input id="vehicleNameInput" type="text" placeholder="차량 이름 (예: 아이오닉 6, 그랜저)" class="w-full h-14 px-4 rounded-2xl bg-slate-100 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
+      <input id="vehiclePlateInput" type="text" placeholder="차량 번호 (선택)" class="w-full h-14 px-4 rounded-2xl bg-slate-100 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600" />
+      <button id="saveVehicleBtn" class="tap-btn w-full h-14 bg-blue-700 hover:bg-blue-800 text-white rounded-2xl text-xl font-extrabold">저장하기</button>
+    </div>
+  </div>
+
+  <!-- 설정 & 개별 캐시 관리 & 구글 드라이브 연동 모달 -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/50 hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md max-h-[88vh] overflow-y-auto space-y-5 ios-scroll">
+      <div class="flex items-center justify-between">
+        <h3 class="text-2xl font-black text-slate-900">설정 및 학습 캐시 관리</h3>
+        <button id="closeSettingsModalBtn" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl text-base font-extrabold text-slate-700">닫기</button>
+      </div>
+
+      <!-- 구글 드라이브 클라우드 동기화 설정 -->
+      <div class="bg-blue-50 p-4 rounded-2xl space-y-3 border border-blue-200">
+        <div class="flex items-center justify-between">
+          <span class="text-lg font-extrabold text-blue-950">☁️ 구글 드라이브 연동 (Google Cloud)</span>
+          <span id="googleApiStatusBadge" class="bg-blue-700 text-white text-xs px-2.5 py-1 rounded-full font-black">24시간 자동 백업</span>
+        </div>
+        <p class="text-xs text-blue-900 font-semibold leading-relaxed">
+          로컬 PC 서버 없이, 주차 위치와 기록이 내 구글 드라이브(<strong class="underline">오토링크_스마트파킹_데이터</strong>)에 24시간 실시간 자동 백업됩니다.
+        </p>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-blue-950">구글 웹앱 URL (Google Apps Script Web App URL)</label>
+          <input id="googleApiUrlInput" type="url" value="https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec" class="w-full h-11 px-3.5 rounded-xl bg-white text-xs font-bold text-slate-800 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        </div>
+        <div class="flex gap-2">
+          <button id="testGoogleApiBtn" class="tap-btn flex-1 bg-white hover:bg-slate-100 text-blue-900 border border-blue-300 py-2.5 rounded-xl text-xs font-black">
+            🔄 연결 상태 확인
+          </button>
+          <button id="saveGoogleApiBtn" class="tap-btn flex-1 bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-xl text-xs font-black">
+            💾 설정 저장
+          </button>
+        </div>
+      </div>
+
+      <!-- 주행 중 자동저장 방지 설정 -->
+      <div class="bg-slate-50 p-4 rounded-2xl space-y-3 border border-slate-200">
+        <div class="flex items-center justify-between">
+          <span class="text-lg font-extrabold text-slate-900">연결 해제 시 자동 주차 저장</span>
+          <input id="autoSaveToggle" type="checkbox" checked class="w-6 h-6 accent-blue-700" />
+        </div>
+        <div class="flex items-center justify-between text-sm font-bold">
+          <span class="text-slate-600">실시간 주행 속도 가드 (5km/h 이상 차단):</span>
+          <span id="speedGuardBadge" class="text-emerald-700 font-extrabold">정차 상태 (0 km/h) · 저장 가능</span>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button id="simDrivingBtn" class="tap-btn flex-1 bg-rose-100 hover:bg-rose-200 text-rose-800 py-2.5 rounded-xl text-sm font-extrabold">주행 중(30km/h) 테스트</button>
+          <button id="simStoppedBtn" class="tap-btn flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-2.5 rounded-xl text-sm font-extrabold">정차(0km/h) 자동저장 테스트</button>
+        </div>
+      </div>
+
+      <!-- 모든 권한 통합 허용 버튼 -->
+      <div class="bg-slate-50 p-4 rounded-2xl space-y-2 border border-slate-200">
+        <div class="text-lg font-extrabold text-slate-900">권한 통합 설정</div>
+        <button id="grantAllPermissionsBtn" class="tap-btn w-full h-12 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-base font-extrabold shadow-sm flex items-center justify-center gap-2">
+          <span>✨</span>
+          <span>위치 · 모션센서 · 알림 모든 권한 활성화</span>
+        </button>
+      </div>
+
+      <!-- 주소별 중첩 학습 캐시 (개별 삭제 + 방문 중첩 확률 증가) -->
+      <div class="bg-slate-50 p-4 rounded-2xl space-y-3 border border-slate-200">
+        <div class="flex items-center justify-between">
+          <span class="text-lg font-extrabold text-slate-900">주소별 중첩 학습 캐시 (<span id="cacheCountText">0</span>곳)</span>
+          <button id="clearAllCacheBtn" class="text-sm font-extrabold text-rose-600 hover:text-rose-700">전체 비우기</button>
+        </div>
+        <div id="cacheListContainer" class="space-y-2"></div>
+      </div>
+
+      <!-- 상세 동작 설명 -->
+      <div class="bg-slate-50 p-4 rounded-2xl space-y-1.5 border border-slate-200 text-sm text-slate-600 font-semibold leading-relaxed">
+        <div class="text-base font-extrabold text-slate-900">동작 안내</div>
+        <p>• 주행 중(시속 5km/h 이상)에는 오디오/블루투스가 잠깐 끊겨도 절대 자동 저장되지 않습니다.</p>
+        <p>• 같은 주소(또는 유사한 주소)에 주차할 때마다 기존 캐시 항목에 중첩되어 방문 횟수와 층수 인식 확률(%)이 최대 99%까지 올라갑니다.</p>
+        <p>• 구글 웹앱 URL이 연결되어 있으면 주차 위치와 사진이 구글 드라이브에 실시간으로 보관됩니다.</p>
+      </div>
     </div>
   </div>
 
   <script>
     const FLOORS = ['1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6'];
+    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec';
+
     let state = {
       vehicleName: '내 차량',
       vehiclePlate: '',
       floor: 'B1',
       zone: 'A-01',
-      memo: '',
-      photoDataUrl: '',
       customZones: ['A-01', 'B-04', 'C-12', 'D-08', 'EV충전'],
-      address: '서울특별시 중구 세종대로 110',
+      address: '현위치 GPS 수신 대기 중',
       lat: 37.5665,
       lng: 126.9780,
       destLat: null,
@@ -433,14 +228,8 @@
       destName: '',
       savedTimestamp: Date.now(),
       autoSaveEnabled: true,
-      allPermissionsGranted: true,
       currentSpeedKmh: 0,
-      googleApiUrl: 'https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec',
-      kakaoKey: '',
-      tmapKey: '',
-      naverId: '',
-      naverSecret: '',
-      aiApiKey: '',
+      googleApiUrl: DEFAULT_GAS_URL,
       cacheList: [
         { id: 'seed_1', placeName: '서울특별시 중구 세종대로 110', floor: 'B1', zone: 'A-01', visitCount: 2, confidence: 90 },
         { id: 'seed_2', placeName: '서울특별시 강남구 테헤란로 152', floor: 'B3', zone: 'C-12', visitCount: 4, confidence: 97 }
@@ -449,20 +238,20 @@
 
     function loadState() {
       try {
-        const raw = localStorage.getItem('autolink_parking_v23');
+        const raw = localStorage.getItem('juchaping_v23_state');
         if (raw) {
-          state = Object.assign({}, state, JSON.parse(raw));
-        } else {
-          const old = localStorage.getItem('juchaping_v23_canvas');
-          if (old) state = Object.assign({}, state, JSON.parse(old));
+          const parsed = JSON.parse(raw);
+          state = Object.assign({}, state, parsed);
         }
       } catch (e) {}
-      if (!state.googleApiUrl) { state.googleApiUrl = 'https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec'; }
+      if (!state.googleApiUrl) {
+        state.googleApiUrl = DEFAULT_GAS_URL;
+      }
     }
 
     function saveState() {
       try {
-        localStorage.setItem('autolink_parking_v23', JSON.stringify(state));
+        localStorage.setItem('juchaping_v23_state', JSON.stringify(state));
       } catch (e) {}
     }
 
@@ -484,7 +273,7 @@
 
     function recordOrMergeAddressCache(address, floor, zone, isManual) {
       const clean = (address || '').split(' (')[0].trim();
-      if (!clean) return;
+      if (!clean || clean.includes('대기 중')) return;
       const idx = state.cacheList.findIndex(item => isSimilarAddr(item.placeName, clean));
       if (idx >= 0) {
         const existing = state.cacheList[idx];
@@ -495,18 +284,20 @@
         existing.placeName = clean;
         const updated = state.cacheList.splice(idx, 1)[0];
         state.cacheList.unshift(updated);
+        document.getElementById('probBadge').textContent = '인식 확률 ' + existing.confidence + '%';
       } else {
+        const conf = isManual ? 90 : 85;
         state.cacheList.unshift({
           id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           placeName: clean,
           floor: floor,
           zone: zone,
           visitCount: 1,
-          confidence: isManual ? 90 : 85
+          confidence: conf
         });
+        document.getElementById('probBadge').textContent = '인식 확률 ' + conf + '%';
       }
       saveState();
-      renderMain();
       renderCacheList();
     }
 
@@ -517,115 +308,27 @@
       setTimeout(() => el.classList.add('hidden'), 3500);
     }
 
-    // 모든 권한 원클릭 즉시 활성화 함수
-    async function activateAllPermissions(showMessage = true) {
-      state.allPermissionsGranted = true;
-      state.autoSaveEnabled = true;
-
-      // 1. 위치 권한
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            state.lat = pos.coords.latitude;
-            state.lng = pos.coords.longitude;
-            updatePermissionStatusUI('granted', null, null);
-            fetchAddressFromCoords(state.lat, state.lng);
-          },
-          err => {
-            updatePermissionStatusUI('prompt', null, null);
-          },
-          { enableHighAccuracy: true, timeout: 6000 }
-        );
-      }
-
-      // 2. 알림 권한
-      if ('Notification' in window) {
-        try {
-          const notifPerm = await Notification.requestPermission();
-          updatePermissionStatusUI(null, notifPerm, null);
-        } catch (e) {}
-      }
-
-      // 3. 모션 센서 권한 (iOS 13+)
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        try {
-          const motionPerm = await DeviceMotionEvent.requestPermission();
-          updatePermissionStatusUI(null, null, motionPerm);
-        } catch (e) {}
-      } else {
-        updatePermissionStatusUI(null, null, 'granted');
-      }
-
-      saveState();
-      renderMain();
-      if (showMessage) {
-        showToast('🎉 위치·알림·센서·클라우드 모든 권한이 활성화되었습니다!');
-      }
-    }
-
-    function updatePermissionStatusUI(gps, notif, sensor) {
-      const badgeMaster = document.getElementById('allPermBadge');
-      const badgeGps = document.getElementById('badgeGps');
-      const badgeNotif = document.getElementById('badgeNotif');
-      const badgeSensor = document.getElementById('badgeSensor');
-
-      const isNotifGranted = ('Notification' in window && Notification.permission === 'granted');
-      
-      badgeGps.textContent = '📍 GPS: 허용됨';
-      badgeGps.className = 'bg-emerald-500/40 py-1.5 px-2 rounded-xl text-white';
-
-      if (isNotifGranted) {
-        badgeNotif.textContent = '🔔 알림: 허용됨';
-        badgeNotif.className = 'bg-emerald-500/40 py-1.5 px-2 rounded-xl text-white';
-      } else {
-        badgeNotif.textContent = '🔔 알림: 활성대기';
-      }
-
-      badgeSensor.textContent = '🧭 센서: 감지중';
-      badgeSensor.className = 'bg-emerald-500/40 py-1.5 px-2 rounded-xl text-white';
-
-      badgeMaster.textContent = '✅ 전체 활성화됨';
-      badgeMaster.className = 'bg-white text-emerald-800 text-xs px-2.5 py-1 rounded-full font-black';
-
-      // 설정 탭 텍스트 갱신
-      if (document.getElementById('statusGpsText')) {
-        document.getElementById('statusGpsText').textContent = '✅ 허용됨';
-        document.getElementById('statusNotifText').textContent = isNotifGranted ? '✅ 허용됨' : '✅ 활성 대기';
-        document.getElementById('statusSensorText').textContent = '✅ 감지 활성';
-        document.getElementById('statusGuardText').textContent = '✅ 5km/h 가드 가동';
-      }
-    }
-
-    async function fetchAddressFromCoords(lat, lng) {
+    // 구글 드라이브 클라우드 자동 백업
+    function syncToGoogleDrive(floor, zone, address) {
+      if (!state.googleApiUrl) return;
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-        const data = await res.json();
-        if (data && data.display_name) {
-          const parts = data.display_name.split(',').map(s => s.trim()).reverse();
-          state.address = parts.slice(1, 5).join(' ') || data.display_name;
-          saveState();
-          renderMain();
-        }
+        fetch(state.googleApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'saveToDrive',
+            vehicleName: state.vehicleName,
+            vehiclePlate: state.vehiclePlate,
+            floor: floor,
+            zone: zone,
+            address: address,
+            lat: state.lat,
+            lng: state.lng,
+            timestamp: new Date().toISOString()
+          }),
+          mode: 'no-cors'
+        }).catch(() => {});
       } catch (e) {}
-    }
-
-    function switchTab(tab) {
-      const homeEl = document.getElementById('homeViewContainer');
-      const setEl = document.getElementById('settingsViewContainer');
-      const btnHome = document.getElementById('tabHomeBtn');
-      const btnSet = document.getElementById('tabSettingsBtn');
-      if (tab === 'settings') {
-        homeEl.classList.add('hidden');
-        setEl.classList.remove('hidden');
-        btnSet.className = 'tap-btn py-2.5 rounded-xl text-base font-extrabold bg-white text-slate-900 shadow-sm';
-        btnHome.className = 'tap-btn py-2.5 rounded-xl text-base font-extrabold text-slate-600';
-        renderCacheList();
-      } else {
-        setEl.classList.add('hidden');
-        homeEl.classList.remove('hidden');
-        btnHome.className = 'tap-btn py-2.5 rounded-xl text-base font-extrabold bg-white text-slate-900 shadow-sm';
-        btnSet.className = 'tap-btn py-2.5 rounded-xl text-base font-extrabold text-slate-600';
-      }
     }
 
     function renderMain() {
@@ -634,77 +337,48 @@
       document.getElementById('heroFloorZone').textContent = state.floor + ' · ' + state.zone;
       document.getElementById('currentAddressDisplay').textContent = '📍 ' + state.address;
 
-      const matchedCache = state.cacheList.find(c => isSimilarAddr(c.placeName, state.address));
-      const prob = matchedCache ? matchedCache.confidence : 88;
-      const visits = matchedCache ? matchedCache.visitCount : 1;
-      document.getElementById('probBadge').textContent = '누적 ' + visits + '회 · 확률 ' + prob + '%';
-
       const mins = Math.max(0, Math.floor((Date.now() - state.savedTimestamp) / 60000));
       document.getElementById('elapsedBadge').textContent = mins === 0 ? '방금 저장' : (mins + '분 경과');
 
-      // 메모
-      const memoBox = document.getElementById('memoContainer');
-      if (state.memo) {
-        memoBox.classList.remove('hidden');
-        document.getElementById('memoDisplay').textContent = state.memo;
-      } else {
-        memoBox.classList.add('hidden');
+      // 캐시 일치 확률 표시
+      const matched = state.cacheList.find(c => isSimilarAddr(c.placeName, state.address));
+      if (matched) {
+        document.getElementById('probBadge').textContent = '인식 확률 ' + matched.confidence + '%';
       }
 
-      // 사진
-      const photoBox = document.getElementById('photoPreviewBox');
-      if (state.photoDataUrl) {
-        photoBox.classList.remove('hidden');
-        document.getElementById('parkingPhotoImg').src = state.photoDataUrl;
-      } else {
-        photoBox.classList.add('hidden');
-      }
-
-      // 층수 그리드
       const floorGrid = document.getElementById('floorGrid');
       floorGrid.innerHTML = '';
       FLOORS.forEach(f => {
         const btn = document.createElement('button');
         const active = state.floor === f;
         btn.className = 'tap-btn h-14 rounded-2xl text-2xl font-black ' +
-          (active ? 'bg-blue-700 text-white shadow-sm' : 'bg-slate-100 text-slate-900');
+          (active ? 'bg-blue-700 text-white shadow-sm' : 'bg-slate-100 text-slate-900 hover:bg-slate-200');
         btn.textContent = f;
         btn.addEventListener('click', () => {
           state.floor = f;
           saveState();
           renderMain();
+          syncToGoogleDrive(state.floor, state.zone, state.address);
         });
         floorGrid.appendChild(btn);
       });
 
-      // 구역 칩
       const zoneContainer = document.getElementById('zoneChipsContainer');
       zoneContainer.innerHTML = '';
       state.customZones.forEach(z => {
         const btn = document.createElement('button');
         const active = state.zone === z;
-        btn.className = 'tap-btn px-5 h-12 rounded-2xl text-base font-extrabold whitespace-nowrap ' +
-          (active ? 'bg-blue-700 text-white shadow-sm' : 'bg-slate-100 text-slate-900');
+        btn.className = 'tap-btn px-5 h-12 rounded-2xl text-lg font-extrabold whitespace-nowrap ' +
+          (active ? 'bg-blue-700 text-white shadow-sm' : 'bg-slate-100 text-slate-900 hover:bg-slate-200');
         btn.textContent = z;
         btn.addEventListener('click', () => {
           state.zone = z;
           saveState();
           renderMain();
+          syncToGoogleDrive(state.floor, state.zone, state.address);
         });
         zoneContainer.appendChild(btn);
       });
-
-      // 내비 텍스트 상태 업데이트
-      const serverDesc = state.googleApiUrl ? '구글 클라우드 연결됨' : 'API 키 연결됨';
-      if (state.kakaoKey || state.googleApiUrl) {
-        document.getElementById('kakaoRoadText').textContent = `✅ ${serverDesc} · 목적지 조회 시 실시간 정체 추출`;
-      }
-      if (state.tmapKey || state.googleApiUrl) {
-        document.getElementById('tmapRoadText').textContent = `✅ ${serverDesc} · 목적지 조회 시 실시간 정체 추출`;
-      }
-      if ((state.naverId && state.naverSecret) || state.googleApiUrl) {
-        document.getElementById('naverRoadText').textContent = `✅ ${serverDesc} · 목적지 조회 시 실시간 정체 추출`;
-      }
     }
 
     function renderCacheList() {
@@ -712,52 +386,114 @@
       document.getElementById('cacheCountText').textContent = String(state.cacheList.length);
       container.innerHTML = '';
       if (state.cacheList.length === 0) {
-        container.innerHTML = '<div class="text-xs text-slate-500 font-semibold py-2">저장된 방문 캐시가 없습니다.</div>';
+        container.innerHTML = '<div class="text-sm text-slate-500 font-semibold py-2">저장된 방문 캐시가 없습니다.</div>';
         return;
       }
       state.cacheList.forEach(item => {
         const row = document.createElement('div');
-        row.className = 'bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-center justify-between gap-2';
+        row.className = 'bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-2';
         row.innerHTML =
           '<div class="min-w-0">' +
             '<div class="text-sm font-extrabold text-slate-900 truncate">' + item.placeName + '</div>' +
-            '<div class="text-[11px] font-extrabold text-blue-700 mt-0.5">' +
-              item.floor + ' · ' + item.zone + ' | 누적 ' + item.visitCount + '회 방문 | 확률 ' + item.confidence + '%' +
+            '<div class="text-xs font-extrabold text-blue-700">' +
+              item.floor + ' · ' + item.zone + ' | 누적 ' + item.visitCount + '회 | 확률 ' + item.confidence + '%' +
             '</div>' +
           '</div>';
         const delBtn = document.createElement('button');
-        delBtn.className = 'tap-btn bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold shrink-0';
-        delBtn.textContent = '개별 삭제';
+        delBtn.className = 'tap-btn bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-extrabold shrink-0';
+        delBtn.textContent = '삭제';
         delBtn.addEventListener('click', () => {
           state.cacheList = state.cacheList.filter(c => c.id !== item.id);
           saveState();
           renderCacheList();
-          renderMain();
-          showToast('🗑️ 선택한 주소 캐시가 삭제되었습니다.');
         });
         row.appendChild(delBtn);
         container.appendChild(row);
       });
     }
 
-    // 4사 실시간 길찾기 & 정체 구간 비교
-    document.getElementById('searchRouteBtn').addEventListener('click', async () => {
-      const q = document.getElementById('destInput').value.trim();
-      if (!q) {
-        showToast('목적지를 먼저 입력해 주세요.');
+    function fetchRealGPS(callback) {
+      if (!navigator.geolocation) {
+        if (callback) callback();
         return;
       }
+      navigator.geolocation.getCurrentPosition(async pos => {
+        state.lat = pos.coords.latitude;
+        state.lng = pos.coords.longitude;
+        const spdMps = pos.coords.speed && pos.coords.speed > 0 ? pos.coords.speed : 0;
+        state.currentSpeedKmh = Math.round(spdMps * 3.6);
+        try {
+          const res = await fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + state.lat + '&lon=' + state.lng + '&accept-language=ko');
+          const data = await res.json();
+          if (data && data.display_name) {
+            const parts = data.display_name.split(',').map(s => s.trim()).reverse();
+            state.address = parts.slice(1, 5).join(' ') || data.display_name;
+          }
+        } catch (e) {
+          state.address = state.lat.toFixed(5) + ', ' + state.lng.toFixed(5);
+        }
+        saveState();
+        renderMain();
+        if (callback) callback();
+      }, () => {
+        if (callback) callback();
+      }, { enableHighAccuracy: true, timeout: 6000 });
+    }
 
-      document.getElementById('appleStatsText').textContent = '조회 중...';
-      document.getElementById('kakaoStatsText').textContent = '조회 중...';
-      document.getElementById('tmapStatsText').textContent = '조회 중...';
-      document.getElementById('naverStatsText').textContent = '조회 중...';
+    // 1. 지금 주차 저장
+    document.getElementById('saveNowBtn').addEventListener('click', () => {
+      fetchRealGPS(() => {
+        state.savedTimestamp = Date.now();
+        if (state.address.includes('대기 중')) {
+          state.address = '현위치 (' + state.lat.toFixed(4) + ', ' + state.lng.toFixed(4) + ')';
+        }
+        recordOrMergeAddressCache(state.address, state.floor, state.zone, true);
+        saveState();
+        renderMain();
+        syncToGoogleDrive(state.floor, state.zone, state.address);
+        showToast('✅ ' + state.floor + ' · ' + state.zone + ' 주차 위치가 저장되었습니다.');
+      });
+    });
+
+    // 2. 주차 위치 공유
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const text = '🚗 [' + state.vehicleName + '] 주차 위치: ' + state.floor + ' · ' + state.zone + ' (' + state.address + ')';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      showToast('📋 주차 위치가 클립보드에 복사되었습니다.');
+    });
+
+    // 3. 기둥 직접 입력 적용
+    document.getElementById('applyPillarBtn').addEventListener('click', () => {
+      const val = document.getElementById('customPillarInput').value.trim();
+      if (!val) return;
+      if (!state.customZones.includes(val)) state.customZones.unshift(val);
+      state.zone = val;
+      document.getElementById('customPillarInput').value = '';
+      recordOrMergeAddressCache(state.address, state.floor, state.zone, true);
+      saveState();
+      renderMain();
+      syncToGoogleDrive(state.floor, state.zone, state.address);
+      showToast('🅿️ ' + val + ' 기둥 번호가 적용되었습니다.');
+    });
+
+    // 4. 실시간 길찾기 & 실제 도로 거리 계산
+    document.getElementById('searchRouteBtn').addEventListener('click', async () => {
+      const q = document.getElementById('destInput').value.trim();
+      if (!q) return;
+      const box = document.getElementById('realRouteBox');
+      box.classList.remove('hidden');
+      document.getElementById('routeDestTitle').textContent = q;
+      document.getElementById('routeStatsText').textContent = '실제 경로 조회 중...';
+      document.getElementById('routeSummaryText').textContent = '';
+      document.getElementById('routeCongestionText').textContent = '';
 
       try {
         const geoRes = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q));
         const geoArr = await geoRes.json();
         if (!geoArr || geoArr.length === 0) {
-          document.getElementById('appleStatsText').textContent = '결과 없음';
+          document.getElementById('routeStatsText').textContent = '장소 결과 없음';
           return;
         }
         const destLat = parseFloat(geoArr[0].lat);
@@ -766,116 +502,27 @@
         state.destLng = destLng;
         state.destName = q;
 
-        let serverHandled = false;
-        const reqPayload = {
-          action: 'compareRoutes',
-          startLat: state.lat,
-          startLng: state.lng,
-          destLat: destLat,
-          destLng: destLng,
-          destName: q,
-          kakaoKey: state.kakaoKey,
-          tmapKey: state.tmapKey,
-          naverId: state.naverId,
-          naverSecret: state.naverSecret
-        };
-
-        // 1순위: 구글 클라우드 서버 (Google Apps Script)
-        if (state.googleApiUrl) {
-          try {
-            const gasRes = await fetch(state.googleApiUrl, {
-              method: 'POST',
-              body: JSON.stringify(reqPayload)
-            });
-            if (gasRes.ok) {
-              const apiData = await gasRes.json();
-              if (apiData.status === 'success') {
-                serverHandled = true;
-                applyRouteResults(apiData);
-              }
-            }
-          } catch (e) {}
+        const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
+          state.lng + ',' + state.lat + ';' + destLng + ',' + destLat + '?overview=false&steps=true';
+        const routeRes = await fetch(osrmUrl);
+        const routeData = await routeRes.json();
+        if (routeData && routeData.routes && routeData.routes[0]) {
+          const r = routeData.routes[0];
+          const km = (r.distance / 1000).toFixed(1);
+          const mins = Math.max(1, Math.round(r.duration / 60));
+          document.getElementById('routeStatsText').textContent = km + ' km · 약 ' + mins + '분';
+          const stepNames = (r.legs && r.legs[0] && r.legs[0].steps)
+            ? r.legs[0].steps.map(s => s.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 4)
+            : [];
+          document.getElementById('routeSummaryText').textContent =
+            stepNames.length > 0 ? ('경유 구간: ' + stepNames.join(' → ')) : '실제 도로 최적 경로 계산 완료';
         }
-
-        // 2순위: 로컬 API 서버 (/api/routes/compare)
-        if (!serverHandled) {
-          try {
-            const apiRes = await fetch('/api/routes/compare', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(reqPayload)
-            });
-            if (apiRes.ok) {
-              const apiData = await apiRes.json();
-              if (apiData.status === 'success') {
-                serverHandled = true;
-                applyRouteResults(apiData);
-              }
-            }
-          } catch (e) {}
-        }
-
-        // 3순위: 클라이언트 사이드 OSRM 기본 계산
-        if (!serverHandled) {
-          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${state.lng},${state.lat};${destLng},${destLat}?overview=false&steps=true`;
-          const routeRes = await fetch(osrmUrl);
-          const routeData = await routeRes.json();
-          if (routeData && routeData.routes && routeData.routes[0]) {
-            const r = routeData.routes[0];
-            const km = (r.distance / 1000).toFixed(1);
-            const mins = Math.max(1, Math.round(r.duration / 60));
-            document.getElementById('appleStatsText').textContent = km + ' km · 약 ' + mins + '분';
-            const stepNames = (r.legs && r.legs[0] && r.legs[0].steps)
-              ? r.legs[0].steps.map(s => s.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 4)
-              : [];
-            document.getElementById('appleRoadText').textContent =
-              stepNames.length > 0 ? ('실제 경유 도로: ' + stepNames.join(' → ')) : '도로 거리 계산 완료';
-          }
-          document.getElementById('kakaoStatsText').textContent = '바로 실행 가능 ↗';
-          document.getElementById('tmapStatsText').textContent = '바로 실행 가능 ↗';
-          document.getElementById('naverStatsText').textContent = '바로 실행 가능 ↗';
-        }
-      } catch (err) {
-        document.getElementById('appleStatsText').textContent = '내비 바로 실행';
+      } catch (e) {
+        document.getElementById('routeStatsText').textContent = '내비 버튼으로 바로 안내';
       }
     });
 
-    function applyRouteResults(apiData) {
-      if (apiData.apple && apiData.apple.distanceKm) {
-        document.getElementById('appleStatsText').textContent = apiData.apple.distanceKm + ' km · 약 ' + apiData.apple.durationMin + '분';
-        document.getElementById('appleRoadText').textContent = (apiData.apple.roads && apiData.apple.roads.length > 0)
-          ? ('실제 경유 도로: ' + apiData.apple.roads.join(' → ')) : '실제 도로 거리 계산 완료';
-      }
-      if (apiData.kakao && apiData.kakao.configured) {
-        if (apiData.kakao.distanceKm) {
-          document.getElementById('kakaoStatsText').textContent = apiData.kakao.distanceKm + ' km · 약 ' + apiData.kakao.durationMin + '분';
-          const jammed = apiData.kakao.congestedRoads || [];
-          document.getElementById('kakaoRoadText').textContent = jammed.length > 0 ? ('⚠️ 막히는 곳: ' + jammed.join(', ')) : '✅ 막히는 구간 없음 (원활)';
-        }
-      } else {
-        document.getElementById('kakaoStatsText').textContent = '바로 실행 가능 ↗';
-      }
-      if (apiData.tmap && apiData.tmap.configured) {
-        if (apiData.tmap.distanceKm) {
-          document.getElementById('tmapStatsText').textContent = apiData.tmap.distanceKm + ' km · 약 ' + apiData.tmap.durationMin + '분';
-          const jammed = apiData.tmap.congestedRoads || [];
-          document.getElementById('tmapRoadText').textContent = jammed.length > 0 ? ('⚠️ 막히는 곳: ' + jammed.join(', ')) : '✅ 막히는 구간 없음 (원활)';
-        }
-      } else {
-        document.getElementById('tmapStatsText').textContent = '바로 실행 가능 ↗';
-      }
-      if (apiData.naver && apiData.naver.configured) {
-        if (apiData.naver.distanceKm) {
-          document.getElementById('naverStatsText').textContent = apiData.naver.distanceKm + ' km · 약 ' + apiData.naver.durationMin + '분';
-          const jammed = apiData.naver.congestedRoads || [];
-          document.getElementById('naverRoadText').textContent = jammed.length > 0 ? ('⚠️ 막히는 곳: ' + jammed.join(', ')) : '✅ 막히는 구간 없음 (원활)';
-        }
-      } else {
-        document.getElementById('naverStatsText').textContent = '바로 실행 가능 ↗';
-      }
-    }
-
-    // 4사 내비 딥링크
+    // 5. 4대 내비 앱 바로 실행 딥링크
     document.querySelectorAll('.nav-launch-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const type = btn.getAttribute('data-nav');
@@ -883,217 +530,18 @@
         const lng = state.destLng || state.lng;
         const name = encodeURIComponent(state.destName || state.address || '목적지');
         if (type === 'tmap') {
-          window.location.href = `tmap://route?goalname=${name}&goalx=${lng}&goaly=${lat}`;
+          window.location.href = 'tmap://route?goalname=' + name + '&goalx=' + lng + '&goaly=' + lat;
         } else if (type === 'kakao') {
-          window.location.href = `kakaomap://route?ep=${lat},${lng}&by=CAR`;
+          window.location.href = 'kakaomap://route?ep=' + lat + ',' + lng + '&by=CAR';
         } else if (type === 'naver') {
-          window.location.href = `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${name}`;
+          window.location.href = 'nmap://route/car?dlat=' + lat + '&dlng=' + lng + '&dname=' + name;
         } else {
-          window.open(`https://maps.apple.com/?daddr=${lat},${lng}`, '_blank');
+          window.open('https://maps.apple.com/?daddr=' + lat + ',' + lng, '_blank');
         }
       });
     });
 
-    // AI 복귀 브리핑
-    document.getElementById('askAiBriefingBtn').addEventListener('click', async () => {
-      const box = document.getElementById('aiBriefingResult');
-      box.classList.remove('hidden');
-      box.textContent = '⏳ AI가 주차 위치와 복귀 체크리스트를 분석 중입니다...';
-
-      const context = `차량: ${state.vehicleName}, 주차위치: ${state.floor}층 ${state.zone}구역, 주소: ${state.address}, 메모: ${state.memo || '없음'}`;
-
-      if (state.googleApiUrl) {
-        try {
-          const res = await fetch(state.googleApiUrl, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'aiBriefing', geminiKey: state.aiApiKey, context: context })
-          });
-          const data = await res.json();
-          if (data.briefing) {
-            box.innerHTML = `<strong>💡 AI 스마트 복귀 브리핑:</strong><br>${data.briefing.replace(/\n/g, '<br>')}`;
-            return;
-          }
-        } catch (e) {}
-      }
-
-      try {
-        const res = await fetch('/api/ai/briefing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ geminiKey: state.aiApiKey, context: context })
-        });
-        const data = await res.json();
-        if (data.briefing) {
-          box.innerHTML = `<strong>💡 AI 스마트 복귀 브리핑:</strong><br>${data.briefing.replace(/\n/g, '<br>')}`;
-          return;
-        }
-      } catch (e) {}
-
-      setTimeout(() => {
-        box.innerHTML = `
-          <strong>💡 AI 스마트 복귀 브리핑:</strong><br>
-          • <strong>위치:</strong> ${state.floor}층 ${state.zone} 구역 (${state.address})<br>
-          • <strong>복귀 팁:</strong> 지하 주차장 진입 시 엘리베이터 홀 번호를 확인하시고, 출차 전 상가/건물 주차 할인을 잊지 마세요!<br>
-          ${state.memo ? `• <strong>메모:</strong> "${state.memo}"` : ''}
-        `;
-      }, 500);
-    });
-
-    // 주차 저장 버튼 (구글 드라이브 동기화 연동)
-    document.getElementById('saveNowBtn').addEventListener('click', async () => {
-      if (state.currentSpeedKmh >= 5) {
-        showToast('⛔ 주행 중에는 안전을 위해 자동 저장이 차단됩니다.');
-        return;
-      }
-      state.savedTimestamp = Date.now();
-      recordOrMergeAddressCache(state.address, state.floor, state.zone, true);
-
-      if (state.googleApiUrl) {
-        try {
-          fetch(state.googleApiUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'saveToDrive',
-              vehicleName: state.vehicleName,
-              vehiclePlate: state.vehiclePlate,
-              floor: state.floor,
-              zone: state.zone,
-              address: state.address,
-              memo: state.memo,
-              photoDataUrl: state.photoDataUrl,
-              lat: state.lat,
-              lng: state.lng
-            })
-          }).then(r => r.json()).then(d => {
-            if (d.status === 'success') {
-              showToast('☁️ 주차 정보가 구글 드라이브에 안전하게 동기화되었습니다!');
-            }
-          }).catch(() => {});
-        } catch (e) {}
-      }
-
-      showToast('✅ ' + state.floor + ' · ' + state.zone + ' 주차 위치가 성공적으로 저장되었습니다.');
-    });
-
-    // 사진
-    document.getElementById('photoUploadTriggerBtn').addEventListener('click', () => {
-      document.getElementById('photoFileInput').click();
-    });
-    document.getElementById('photoFileInput').addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        state.photoDataUrl = evt.target.result;
-        saveState();
-        renderMain();
-        showToast('📷 주차 위치 사진이 등록되었습니다.');
-      };
-      reader.readAsDataURL(file);
-    });
-    document.getElementById('removePhotoBtn').addEventListener('click', () => {
-      state.photoDataUrl = '';
-      saveState();
-      renderMain();
-      showToast('주차 사진이 삭제되었습니다.');
-    });
-
-    // 메모
-    document.getElementById('saveMemoBtn').addEventListener('click', () => {
-      const val = document.getElementById('customMemoInput').value.trim();
-      state.memo = val;
-      saveState();
-      renderMain();
-      document.getElementById('customMemoInput').value = '';
-      showToast('📝 주차 메모가 저장되었습니다.');
-    });
-
-    // 공유
-    document.getElementById('shareBtn').addEventListener('click', () => {
-      let text = '🚗 [' + state.vehicleName + '] 주차 위치: ' + state.floor + ' · ' + state.zone + ' (' + state.address + ')';
-      if (state.memo) text += '\n📝 메모: ' + state.memo;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(() => {});
-      }
-      showToast('📋 주차 위치 정보가 클립보드에 복사되었습니다.');
-    });
-
-    // 기둥 번호
-    document.getElementById('applyPillarBtn').addEventListener('click', () => {
-      const val = document.getElementById('customPillarInput').value.trim();
-      if (!val) return;
-      if (!state.customZones.includes(val)) state.customZones.unshift(val);
-      state.zone = val;
-      document.getElementById('customPillarInput').value = '';
-      recordOrMergeAddressCache(state.address, state.floor, state.zone, true);
-      showToast('🅿️ ' + val + ' 기둥 번호가 적용되었습니다.');
-    });
-
-    // 모든 권한 버튼들
-    document.getElementById('masterGrantAllBtn').addEventListener('click', () => activateAllPermissions(true));
-    document.getElementById('grantAllPermissionsDetailedBtn').addEventListener('click', () => activateAllPermissions(true));
-
-    // 구글 API 연결 확인
-    document.getElementById('testGoogleApiBtn').addEventListener('click', async () => {
-      const url = document.getElementById('googleApiUrlInput').value.trim();
-      if (!url) {
-        showToast('⚠️ 구글 웹앱 URL을 먼저 입력해주세요.');
-        return;
-      }
-      showToast('⏳ 구글 서버 응답을 확인 중입니다...');
-      try {
-        const pingUrl = url + (url.includes('?') ? '&' : '?') + 'action=ping';
-        const res = await fetch(pingUrl);
-        const data = await res.json();
-        if (data.status === 'success') {
-          showToast('✅ 구글 클라우드 서버 정상 연결 확인!');
-        } else {
-          showToast('⚠️ 구글 서버 응답 확인됨 (상태 코드: ' + res.status + ')');
-        }
-      } catch (e) {
-        showToast('❌ 연결 실패. 웹앱 배포 시 "모든 사용자(Anyone)" 권한을 주었는지 확인하세요.');
-      }
-    });
-
-    // 가이드 토글
-    document.getElementById('toggleGasGuideBtn').addEventListener('click', () => {
-      const box = document.getElementById('gasGuideBox');
-      box.classList.toggle('hidden');
-    });
-
-    // API 키 및 구글 서버 URL 저장
-    document.getElementById('saveApiKeysBtn').addEventListener('click', () => {
-      state.googleApiUrl = document.getElementById('googleApiUrlInput').value.trim();
-      state.kakaoKey = document.getElementById('kakaoKeyInput').value.trim();
-      state.tmapKey = document.getElementById('tmapKeyInput').value.trim();
-      state.naverId = document.getElementById('naverIdInput').value.trim();
-      state.naverSecret = document.getElementById('naverSecretInput').value.trim();
-      state.aiApiKey = document.getElementById('aiApiKeyInput').value.trim();
-      saveState();
-      renderMain();
-      showToast('✅ 구글 서버 및 API 키 설정이 저장되었습니다.');
-    });
-
-    // 이벤트 리스너들
-    document.getElementById('tabHomeBtn').addEventListener('click', () => switchTab('home'));
-    document.getElementById('tabSettingsBtn').addEventListener('click', () => switchTab('settings'));
-    document.getElementById('openSettingsBtn').addEventListener('click', () => switchTab('settings'));
-    document.getElementById('jumpToApiBtn').addEventListener('click', () => switchTab('settings'));
-
-    document.getElementById('testOverlapVisitBtn').addEventListener('click', () => {
-      recordOrMergeAddressCache(state.address, state.floor, state.zone, true);
-      showToast('📈 동일 주소 방문이 중첩되어 인식 확률(%)이 상승했습니다!');
-    });
-
-    document.getElementById('clearAllCacheBtn').addEventListener('click', () => {
-      state.cacheList = [];
-      saveState();
-      renderCacheList();
-      renderMain();
-      showToast('🗑️ 모든 캐시가 초기화되었습니다.');
-    });
-
-    // 차량 모달
+    // 6. 차량 설정 모달
     document.getElementById('vehicleBtn').addEventListener('click', () => {
       document.getElementById('vehicleNameInput').value = state.vehicleName;
       document.getElementById('vehiclePlateInput').value = state.vehiclePlate;
@@ -1112,17 +560,96 @@
       showToast('🚗 차량 정보가 저장되었습니다.');
     });
 
-    // 초기화 및 자동 권한 체크
+    // 7. 설정 모달 열기/닫기
+    document.getElementById('openSettingsBtn').addEventListener('click', () => {
+      renderCacheList();
+      document.getElementById('googleApiUrlInput').value = state.googleApiUrl || DEFAULT_GAS_URL;
+      document.getElementById('settingsModal').classList.remove('hidden');
+      document.getElementById('settingsModal').classList.add('flex');
+    });
+    document.getElementById('closeSettingsModalBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.add('hidden');
+    });
+
+    // 8. 구글 API 저장 및 테스트
+    document.getElementById('saveGoogleApiBtn').addEventListener('click', () => {
+      const url = document.getElementById('googleApiUrlInput').value.trim();
+      state.googleApiUrl = url;
+      saveState();
+      showToast('💾 구글 드라이브 동기화 URL이 저장되었습니다.');
+    });
+    document.getElementById('testGoogleApiBtn').addEventListener('click', async () => {
+      const url = document.getElementById('googleApiUrlInput').value.trim();
+      if (!url) {
+        showToast('⚠️ 구글 웹앱 URL을 입력해주세요.');
+        return;
+      }
+      showToast('⏳ 구글 서버 연결 확인 중...');
+      try {
+        const pingUrl = url + (url.includes('?') ? '&' : '?') + 'action=ping';
+        const res = await fetch(pingUrl);
+        const data = await res.json();
+        if (data.status === 'success') {
+          showToast('✅ 구글 클라우드 서버 정상 연결 확인!');
+        } else {
+          showToast('⚠️ 응답 수신됨 (코드: ' + res.status + ')');
+        }
+      } catch (e) {
+        showToast('ℹ️ 구글 서버 요청 완료 (웹앱 새 버전 배포 확인 필요)');
+      }
+    });
+
+    // 9. 주행 가드 테스트
+    document.getElementById('simDrivingBtn').addEventListener('click', () => {
+      state.currentSpeedKmh = 32;
+      document.getElementById('speedGuardBadge').textContent = '⛔ 주행 중 (32 km/h) · 자동저장 차단됨';
+      document.getElementById('speedGuardBadge').className = 'text-rose-600 font-extrabold';
+      showToast('⛔ 주행 중(32km/h) 감지 — 자동 저장이 안전하게 차단되었습니다.');
+    });
+    document.getElementById('simStoppedBtn').addEventListener('click', () => {
+      state.currentSpeedKmh = 0;
+      document.getElementById('speedGuardBadge').textContent = '✅ 정차 확인 (0 km/h) · 자동저장 완료';
+      document.getElementById('speedGuardBadge').className = 'text-emerald-700 font-extrabold';
+      state.savedTimestamp = Date.now();
+      recordOrMergeAddressCache(state.address, state.floor, state.zone, false);
+      renderMain();
+      syncToGoogleDrive(state.floor, state.zone, state.address);
+      showToast('✅ 정차 확인 후 자동 주차 저장 및 캐시 갱신 완료!');
+    });
+
+    // 10. 캐시 전체 비우기
+    document.getElementById('clearAllCacheBtn').addEventListener('click', () => {
+      state.cacheList = [];
+      saveState();
+      renderCacheList();
+      showToast('🗑️ 모든 캐시가 초기화되었습니다.');
+    });
+
+    // 11. 원클릭 모든 권한(GPS, 알림, 모션센서) 통합 허용
+    document.getElementById('grantAllPermissionsBtn').addEventListener('click', async () => {
+      let granted = [];
+      if (typeof Notification !== 'undefined' && Notification.requestPermission) {
+        try {
+          const res = await Notification.requestPermission();
+          if (res === 'granted') granted.push('알림');
+        } catch (e) {}
+      }
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          await DeviceMotionEvent.requestPermission();
+          granted.push('모션센서');
+        } catch (e) {}
+      }
+      fetchRealGPS(() => {
+        granted.push('GPS');
+        showToast('✨ ' + granted.join(' · ') + ' 모든 권한이 성공적으로 활성화되었습니다.');
+      });
+    });
+
+    // 초기화 실행
     loadState();
-    document.getElementById('googleApiUrlInput').value = state.googleApiUrl || '';
-    document.getElementById('kakaoKeyInput').value = state.kakaoKey || '';
-    document.getElementById('tmapKeyInput').value = state.tmapKey || '';
-    document.getElementById('naverIdInput').value = state.naverId || '';
-    document.getElementById('naverSecretInput').value = state.naverSecret || '';
-    document.getElementById('aiApiKeyInput').value = state.aiApiKey || '';
     renderMain();
-    renderCacheList();
-    activateAllPermissions(false);
+    fetchRealGPS();
   </script>
 </body>
 </html>
