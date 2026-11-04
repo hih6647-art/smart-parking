@@ -1,50 +1,27 @@
-// SmartParking Service Worker v2.4.0
-const CACHE_NAME = 'smartparking-v2.4.0';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png'
-];
+const CACHE_NAME = 'autolink-parking-v2.4';
+const STATIC_ASSETS = ['./index.html', './manifest.json'];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch(() => {});
-    })
-  );
+self.addEventListener('install', event => {
   self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  // POST 요청이나 외부 API(script.google.com, nominatim, osrm 등)는 서비스워커가 가로채지 않고 통과
+  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        return networkResponse;
-      }).catch(() => {
-        return caches.match('./index.html');
-      });
-    })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
