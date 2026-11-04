@@ -1,0 +1,21 @@
+# Xcode / iOS
+build/
+build_output/
+DerivedData/
+*.xcworkspace
+*.xcuserdatad
+*.xcuserstate
+xcuserdata/
+Payload/
+*.ipa
+*.app
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Windows / Editor
+.vscode/
+.idea/
+*.swp
+*.bak
