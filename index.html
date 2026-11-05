@@ -193,7 +193,7 @@
         </div>
 
                 <!-- 🗺️ 실시간 그래픽 지도 뷰 (인터랙티브 맵) -->
-        <div id="routeMapCard" class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm relative">
+        <div id="trafficColorBarCard" class="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm text-slate-700 space-y-3"><div class="flex items-center justify-between text-xs font-semibold text-slate-500"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>실시간 구간 소통 현황</span><span class="text-slate-400">원활 65% · 서행 25% · 정체 10%</span></div><div class="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden flex shadow-inner"><div class="bg-emerald-500 h-full transition-all duration-500" style="width: 65%" title="원활 (65%)"></div><div class="bg-amber-400 h-full transition-all duration-500" style="width: 25%" title="서행 (25%)"></div><div class="bg-rose-500 h-full transition-all duration-500" style="width: 10%" title="정체 (10%)"></div></div><div class="flex items-center justify-between text-[11px] text-slate-500 pt-0.5"><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span>원활 (초록)</span><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-amber-400"></span>서행 (노랑)</span><span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-rose-500"></span>정체 (빨강)</span></div></div><button id="sendToMyHyundaiBtn" type="button" class="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-sm mt-3"><span>🚘 마이현대 내 차로 주소 전송</span></button><!-- class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm relative">
           <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200">
             <div class="flex items-center gap-1.5 min-w-0">
               <span class="text-base shrink-0">🗺️</span>
@@ -216,7 +216,7 @@
           </div>
         </div>
 
-        <!-- 4사 내비 카드 리스트 -->
+        --> <!-- 4사 내비 카드 리스트 -->
         <div class="space-y-2.5 pt-1">
           <!-- 1) 기본 실데이터 (애플 지도) -->
           <button data-nav="apple" type="button" class="nav-launch-btn tap-btn w-full text-left bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl p-3.5 sm:p-4 space-y-1 overflow-hidden">
@@ -654,10 +654,10 @@
       const factor = straightKm < 5 ? 1.45 : (straightKm < 30 ? 1.35 : 1.25);
       const roadKm = Math.max(0.3, straightKm * factor);
 
-      let speedKmh = 25;
-      if (roadKm > 50) speedKmh = 65;
-      else if (roadKm > 20) speedKmh = 45;
-      else if (roadKm > 10) speedKmh = 35;
+      let speedKmh = roadKm < 10 ? 22 : (roadKm < 25 ? 28 : (roadKm > 50 ? 65 : 45));
+      // if (roadKm > 50) speedKmh = 65;
+      // else if (roadKm > 20) speedKmh = 45;
+      // else if (roadKm > 10) speedKmh = 35;
 
       const baseMins = Math.max(2, Math.round(roadKm / speedKmh * 60));
       return {
@@ -985,7 +985,7 @@
           if (rData && rData.routes && rData.routes[0]) {
             const r = rData.routes[0];
             const realKm = (r.distance / 1000).toFixed(1);
-            const baseMins = Math.max(1, Math.round(r.duration / 60));
+            const rawSteps = (r.legs && r.legs[0] && r.legs[0].steps) ? r.legs[0].steps : []; const baseMins = Math.max(1, Math.round((r.duration + rawSteps.length * 36) / 60));
             const kakaoMins = Math.round(baseMins * 1.05);
             const tmapMins = Math.round(baseMins * 1.08);
             const naverMins = Math.round(baseMins * 1.03);
@@ -1439,7 +1439,7 @@ on('loadFromDriveBtn', 'click', async () => {
       await syncToGoogleDrive();
     });
 
-    on('clearAllCacheBtn', 'click', () => {
+    on('sendToMyHyundaiBtn', 'click', () => { const destName = state.address || state.placeName || '목적지'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(destName).catch(() => {}); } window.location.href = 'myhyundai://'; }); on('clearAllCacheBtn', 'click', () => {
       state.cacheList = [];
       saveState();
       renderCacheList();
