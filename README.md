@@ -37,7 +37,7 @@
 ## ☁️ 구글 서버(Google Drive 백엔드) 설정
 
 현재 기본 설정으로 구글 앱스 스크립트 웹앱이 연결되어 있습니다:  
-`https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec`
+`https://script.google.com/macros/s/AKfycbzSKHFN5EFWWzHnwkYl0GMfpdWDHVTT1Ss2qto4irPRmgyyo77vgaIbqEwWZ3O72Qj4Ag/exec`
 
 **[Google Apps Script 연동 팁]**
 1. [내 Google Apps Script 에디터](https://script.google.com/d/1NAoDFzfPOIXKwDpp7ONei34qtvolcER_o0HBOYfh0xDeo86qfcITPZnV/edit)에 접속합니다.
