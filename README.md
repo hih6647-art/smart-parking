@@ -40,7 +40,7 @@
 `https://script.google.com/macros/s/AKfycbx9k-1-6aFZSKm88qJcZ86haaBJJfF2z8Dr0LvHRObFgSJbDvmAZhVfnu0u8C5saCIk1Q/exec`
 
 **[Google Apps Script 연동 팁]**
-1. [내 Google Apps Script 에디터](https://script.google.com/d/1NAoDFzfPOIXKwDpp7ONei34qtvolcER_o0HBOYfh0xDeo86qfcITPZnV/edit)에 접속합니다.
+1. [내 Google Apps Script 에디터](https://script.google.com/d/1sus-xyqLm2p0oHLWsLMrfQldf2jdxnBZjXzo6r5XFpE1NgHqKIExOdlt/edit)에 접속합니다.
 2. 본 저장소의 `Code.gs` 전체 내용을 복사하여 붙여넣고 저장(`Ctrl + S`)합니다.
 3. 상단 **[배포] -> [배포 관리] -> [새 버전(New Version)]**으로 배포를 완료하면 구글 드라이브 24시간 자동 저장이 활성화됩니다.
 
