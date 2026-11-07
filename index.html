@@ -362,7 +362,7 @@
       if (node) node.addEventListener(event, handler);
     }
 
-    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzSKHFN5EFWWzHnwkYl0GMfpdWDHVTT1Ss2qto4irPRmgyyo77vgaIbqEwWZ3O72Qj4Ag/exec';
+    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx9k-1-6aFZSKm88qJcZ86haaBJJfF2z8Dr0LvHRObFgSJbDvmAZhVfnu0u8C5saCIk1Q/exec';
     const FLOORS = ['1F', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6'];
 
     const KOREAN_POI_INDEX = [
@@ -446,7 +446,7 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           state = Object.assign({}, state, parsed);
-          if (!state.googleApiUrl || state.googleApiUrl.indexOf('AKfycby') !== -1) {
+          if (!state.googleApiUrl || state.googleApiUrl.indexOf('AKfycby') !== -1 || state.googleApiUrl.indexOf('AKfycbzSKHFN5') !== -1) {
             state.googleApiUrl = DEFAULT_GAS_URL;
           }
         }
