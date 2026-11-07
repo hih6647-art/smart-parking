@@ -1,4 +1,4 @@
-const CACHE_NAME = 'autolink-parking-v2.7';
+const CACHE_NAME = 'autolink-parking-v2.8.1';
 const STATIC_ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', event => {

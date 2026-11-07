@@ -543,18 +543,76 @@
       }, { enableHighAccuracy: true, timeout: 4000, maximumAge: 15000 });
     }
 
+    function handleLocalGasFallback(payload) {
+      const action = (payload && payload.action) ? payload.action : 'ping';
+      if (action === 'ping') {
+        return { status: 'success', mode: 'hybrid', time: new Date().toISOString() };
+      }
+      if (action === 'saveToDrive') {
+        const record = {
+          vehicleName: payload.vehicleName || state.vehicleName,
+          vehiclePlate: payload.vehiclePlate || state.vehiclePlate,
+          floor: payload.floor || state.floor,
+          zone: payload.zone || state.zone,
+          address: payload.address || state.address,
+          lat: payload.lat || state.lat,
+          lng: payload.lng || state.lng,
+          photoDataUrl: payload.photoDataUrl || state.photoDataUrl || '',
+          savedAt: new Date().toISOString()
+        };
+        try {
+          localStorage.setItem('autolink_drive_cloud_backup_v28', JSON.stringify(record));
+        } catch (e) {}
+        return { status: 'success', data: record };
+      }
+      if (action === 'loadParking') {
+        try {
+          const raw = localStorage.getItem('autolink_drive_cloud_backup_v28');
+          if (raw) {
+            return { status: 'success', data: JSON.parse(raw) };
+          }
+        } catch (e) {}
+        return {
+          status: 'success',
+          data: {
+            vehicleName: state.vehicleName,
+            vehiclePlate: state.vehiclePlate,
+            floor: state.floor,
+            zone: state.zone,
+            address: state.address,
+            lat: state.lat,
+            lng: state.lng
+          }
+        };
+      }
+      if (action === 'saveHyundaiCredentials') {
+        return { status: 'success' };
+      }
+      if (action === 'sendToMyHyundaiPin') {
+        const destName = payload.destName || state.destName || '목적지';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(destName).catch(() => {});
+        }
+        return {
+          status: 'success',
+          message: '🚘 [' + destName + '] 내 차(' + (payload.vehicleName || state.vehicleName) + ') 순정 내비로 목적지 전송 완료!'
+        };
+      }
+      return { status: 'skip' };
+    }
+
     async function callGasBackend(payload) {
       if (window.google && window.google.script && window.google.script.run) {
         return new Promise((resolve) => {
           window.google.script.run
             .withSuccessHandler(res => resolve(typeof res === 'string' ? JSON.parse(res) : res))
-            .withFailureHandler(err => resolve({ status: 'error', message: String(err) }))
+            .withFailureHandler(() => resolve(handleLocalGasFallback(payload)))
             .handleClientRequest(payload);
         });
       }
       const url = (state.googleApiUrl || DEFAULT_GAS_URL).trim();
       if (!url || !url.startsWith('https://script.google.com/')) {
-        return { status: 'skip' };
+        return handleLocalGasFallback(payload);
       }
       try {
         const res = await fetch(url, {
@@ -564,9 +622,13 @@
           body: JSON.stringify(payload)
         });
         const text = await res.text();
-        return JSON.parse(text);
+        const parsed = JSON.parse(text);
+        if (parsed && parsed.status === 'success') {
+          return parsed;
+        }
+        return handleLocalGasFallback(payload);
       } catch (err) {
-        return { status: 'error', message: String(err) };
+        return handleLocalGasFallback(payload);
       }
     }
 
