@@ -1,4 +1,4 @@
-const CACHE_NAME = 'autolink-parking-v2.4';
+const CACHE_NAME = 'autolink-parking-v2.7';
 const STATIC_ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', event => {
@@ -17,7 +17,6 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // POST 요청이나 외부 API(script.google.com, nominatim, osrm 등)는 서비스워커가 가로채지 않고 통과
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
