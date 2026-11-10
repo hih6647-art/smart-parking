@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>오토링크 파킹 (AutoLink Parking)</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <!-- 기둥 번호 사진 OCR 인식용 Tesseract.js -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body class="bg-[#F9F6F0] text-slate-900 min-h-screen pb-12 font-sans select-none">
+
+  <!-- 상단 고정 바 -->
+  <header class="sticky top-0 z-30 bg-[#1E293B] text-white px-4 py-3 shadow-md flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <span class="bg-[#E56324] text-white font-black px-2.5 py-1 rounded-lg text-lg">P</span>
+      <div>
+        <div id="triggerBadge" class="text-[11px] text-orange-300 font-bold">CarPlay · Bluetooth 원샷 대기 모드 (발열 0%)</div>
+        <div id="topBannerText" class="text-base font-extrabold tracking-tight">현재: B1 · A-01</div>
+      </div>
+    </div>
+    <button id="openSettingsBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-xl text-sm font-bold">
+      ⚙️ 설정 · 단축어
+    </button>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 pt-4 space-y-4">
+
+    <!-- 자동 저장 / OCR 완료 알림 배너 -->
+    <div id="autoSaveBanner" class="hidden bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-md items-center justify-between text-sm font-extrabold">
+      <span id="autoSaveBannerText">✅ 위치가 자동 저장되었습니다!</span>
+      <button onclick="document.getElementById('autoSaveBanner').classList.add('hidden')" class="text-xs bg-emerald-800 px-2 py-1 rounded-lg shrink-0 ml-2">닫기</button>
+    </div>
+
+    <!-- 1. 현재 주차 위치 초대형 카드 -->
+    <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 overflow-hidden">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span id="addressBadge" class="text-xs font-bold bg-orange-100 text-[#E56324] px-3 py-1 rounded-full truncate">
+          📍 위치 확인 대기 중
+        </span>
+        <span id="probBadge" class="shrink-0 text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
+          누적 1회 · 확률 85%
+        </span>
+      </div>
+
+      <div class="text-center my-4">
+        <div id="currentFloorPillar" class="text-5xl font-black text-slate-900 tracking-tight">
+          B1 · A-01
+        </div>
+        <div id="savedTimeText" class="text-xs text-slate-500 mt-1.5 font-medium">
+          마지막 기록: 대기 중 (시동 끌 때 1회만 작동)
+        </div>
+      </div>
+
+      <!-- 📷 기둥 번호 카메라 촬영 OCR 자동 인식 버튼 -->
+      <div class="mb-3">
+        <input id="ocrCameraInput" type="file" accept="image/*" capture="environment" class="hidden" />
+        <button id="ocrCameraBtn" class="w-full py-3.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.99] text-white font-extrabold text-base shadow-sm flex items-center justify-center gap-2">
+          <span>📷 기둥 번호 사진 찍어 자동 입력 (OCR)</span>
+        </button>
+        <div id="ocrStatusText" class="hidden text-xs font-bold text-indigo-700 text-center mt-1.5">
+          🔍 기둥 글자(층·구역) 분석 중...
+        </div>
+      </div>
+
+      <!-- 촬영된 주차 기둥 사진 미리보기 -->
+      <div id="photoPreviewBox" class="hidden mb-3 relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+        <img id="photoPreviewImg" src="" alt="주차 기둥 사진" class="w-full h-36 object-cover" />
+        <button id="clearPhotoBtn" class="absolute top-2 right-2 bg-black/70 text-white text-xs font-bold px-2.5 py-1 rounded-lg">
+          사진 삭제
+        </button>
+      </div>
+
+      <!-- 층수 대형 버튼 (1F ~ B6 + 원샷 저장) -->
+      <div class="grid grid-cols-4 gap-2 mb-3">
+        <button data-floor="1F" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-slate-100 text-slate-800">1F</button>
+        <button data-floor="B1" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-[#E56324] text-white">B1</button>
+        <button data-floor="B2" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-slate-100 text-slate-800">B2</button>
+        <button data-floor="B3" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-slate-100 text-slate-800">B3</button>
+        <button data-floor="B4" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-slate-100 text-slate-800">B4</button>
+        <button data-floor="B5" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-slate-100 text-slate-800">B5</button>
+        <button data-floor="B6" class="floor-btn py-3.5 rounded-2xl font-extrabold text-lg bg-slate-100 text-slate-800">B6</button>
+        <button id="gpsSaveBtn" class="py-3.5 rounded-2xl font-extrabold text-base bg-slate-900 text-white active:scale-95">📌 저장</button>
+      </div>
+
+      <!-- 기둥 빠른 선택 & 직접 입력 (min-w-0 오버플로우 방지 적용) -->
+      <div class="grid grid-cols-4 gap-2 mb-3">
+        <button data-pillar="A-01" class="pillar-btn py-2.5 rounded-xl font-bold text-sm bg-slate-100">A-01</button>
+        <button data-pillar="B-05" class="pillar-btn py-2.5 rounded-xl font-bold text-sm bg-slate-100">B-05</button>
+        <button data-pillar="C-12" class="pillar-btn py-2.5 rounded-xl font-bold text-sm bg-slate-100">C-12</button>
+        <button data-pillar="D-08" class="pillar-btn py-2.5 rounded-xl font-bold text-sm bg-slate-100">D-08</button>
+      </div>
+
+      <div class="flex items-center gap-2 w-full">
+        <input id="customPillarInput" type="text" placeholder="기둥 번호 직접 입력 (예: E-04)"
+          class="flex-1 min-w-0 px-3.5 py-3 rounded-xl border border-slate-300 text-base font-bold focus:outline-none focus:border-[#E56324]" />
+        <button id="applyPillarBtn" class="shrink-0 bg-[#E56324] text-white font-extrabold px-4 py-3 rounded-xl text-base">
+          적용
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. 홈페이지 기반 실시간 길찾기 비교 (카카오맵 · 네이버 지도 컬러 바 UI) -->
+    <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 overflow-hidden">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-black text-slate-900">🧭 실시간 웹 길찾기 동기화 비교</h2>
+        <button id="openPostcodeBtn" class="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg">
+          🔍 주소검색 팝업
+        </button>
+      </div>
+
+      <!-- 목적지 입력창 (min-w-0 오버플로우 방지 적용) -->
+      <div class="flex items-center gap-2 w-full mb-3">
+        <input id="destInput" type="text" placeholder="목적지 입력 (예: 강남역, 더현대 서울)"
+          class="flex-1 min-w-0 px-3.5 py-3 rounded-xl border border-slate-300 text-base font-bold focus:outline-none focus:border-[#E56324]" />
+        <button id="compareRouteBtn" class="shrink-0 bg-slate-900 text-white font-extrabold px-4 py-3 rounded-xl text-base">
+          비교
+        </button>
+      </div>
+
+      <!-- 빠른 거점 버튼 -->
+      <div class="flex flex-wrap gap-1.5 mb-4">
+        <button data-dest="강남역" data-lat="37.497952" data-lng="127.027619" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">강남역</button>
+        <button data-dest="서울역" data-lat="37.554648" data-lng="126.972559" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">서울역</button>
+        <button data-dest="더현대 서울" data-lat="37.525868" data-lng="126.928426" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">더현대 서울</button>
+        <button data-dest="코엑스" data-lat="37.511682" data-lng="127.059151" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">코엑스</button>
+        <button data-dest="올림픽파크포레온" data-lat="37.522854" data-lng="127.135241" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">올림픽파크포레온</button>
+      </div>
+
+      <!-- 컬러 바 비교 결과 (카카오맵 · 네이버 지도) -->
+      <div class="space-y-3">
+        <!-- 카카오맵 컬러 바 -->
+        <div id="kakaoCard" class="p-4 rounded-2xl bg-amber-50 border border-amber-200 cursor-pointer">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-extrabold text-base text-slate-900">🟡 카카오맵 (실시간 추천)</span>
+            <span id="kakaoTime" class="text-xl font-black text-amber-900">대기 중</span>
+          </div>
+          <div class="w-full h-3 bg-amber-200 rounded-full overflow-hidden mb-1.5">
+            <div id="kakaoBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 45%"></div>
+          </div>
+          <div id="kakaoStatus" class="text-xs font-bold text-slate-700">목적지를 입력하고 비교를 눌러주세요 (탭하면 카카오맵 열기)</div>
+        </div>
+
+        <!-- 네이버 지도 컬러 바 -->
+        <div id="naverCard" class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 cursor-pointer">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-extrabold text-base text-slate-900">🟢 네이버 지도 (실시간 최적)</span>
+            <span id="naverTime" class="text-xl font-black text-emerald-900">대기 중</span>
+          </div>
+          <div class="w-full h-3 bg-emerald-200 rounded-full overflow-hidden mb-1.5">
+            <div id="naverBar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 45%"></div>
+          </div>
+          <div id="naverStatus" class="text-xs font-bold text-slate-700">목적지를 입력하고 비교를 눌러주세요 (탭하면 네이버 지도 열기)</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ⚙️ 설정 · CarPlay/블루투스 단축어 복사 · 캐시 모달 -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/60 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 max-h-[85vh] overflow-y-auto space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-black">⚙️ CarPlay·블루투스 자동화 & 캐시</h3>
+        <button id="closeSettingsBtn" class="text-sm font-bold bg-slate-200 px-3 py-1.5 rounded-xl">닫기</button>
+      </div>
+
+      <!-- CarPlay & Bluetooth 단축어 원클릭 복사 -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+        <div class="text-xs font-extrabold text-slate-800">📱 아이폰 단축어(자동화) → 'URL 열기'에 붙여넣기</div>
+        <button id="copyCarplayUrlBtn" class="w-full bg-[#E56324] text-white font-bold py-2.5 rounded-xl text-xs">
+          📋 1. CarPlay 연결 해제용 자동저장 URL 복사
+        </button>
+        <button id="copyBtUrlBtn" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs">
+          📋 2. 차량 Bluetooth 해제용 자동저장 URL 복사
+        </button>
+      </div>
+
+      <div class="space-y-2 border-t pt-3">
+        <label class="text-xs font-bold text-slate-600">☁️ Google Apps Script (Code.gs) 웹앱 URL</label>
+        <input id="gasUrlInput" type="text"
+          class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-mono"
+          value="https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec" />
+        <button id="saveGasUrlBtn" class="w-full bg-slate-900 text-white font-bold py-2.5 rounded-xl text-sm">
+          구글 서버 주소 저장
+        </button>
+      </div>
+
+      <!-- 주소별 중첩 학습 캐시 목록 (개별 삭제 지원) -->
+      <div class="border-t pt-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-extrabold">📚 주소별 중첩 학습 캐시</span>
+          <button id="addCacheTestBtn" class="text-xs font-bold bg-orange-100 text-[#E56324] px-2.5 py-1 rounded-lg">
+            ➕ 현재 주소 중첩 테스트
+          </button>
+        </div>
+        <div id="cacheListContainer" class="space-y-2 text-xs"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyW9yR-Vn-br7Dat1wwbIhYH2JreG0B_g0sbrA-KcwCmOhn00AQL2JG353gdGDt2jBs8w/exec';
+
+    const state = {
+      floor: localStorage.getItem('al_floor') || 'B1',
+      pillar: localStorage.getItem('al_pillar') || 'A-01',
+      address: localStorage.getItem('al_address') || '서울특별시 중구 세종대로 110',
+      sLat: parseFloat(localStorage.getItem('al_lat')) || 37.5665,
+      sLng: parseFloat(localStorage.getItem('al_lng')) || 126.9780,
+      eLat: 37.497952,
+      eLng: 127.027619,
+      destName: '강남역',
+      photoDataUrl: localStorage.getItem('al_photo') || '',
+      gasUrl: localStorage.getItem('al_gas_url') || DEFAULT_GAS_URL,
+      cache: JSON.parse(localStorage.getItem('al_address_cache') || '[]')
+    };
+
+    const KNOWN_PLACES = {
+      '강남역': { lat: 37.497952, lng: 127.027619 },
+      '서울역': { lat: 37.554648, lng: 126.972559 },
+      '더현대 서울': { lat: 37.525868, lng: 126.928426 },
+      '코엑스': { lat: 37.511682, lng: 127.059151 },
+      '올림픽파크포레온': { lat: 37.522854, lng: 127.135241 },
+      '헬리오시티': { lat: 37.497812, lng: 127.107231 },
+      '반포자이': { lat: 37.507214, lng: 127.011765 }
+    };
+
+    function on(id, event, handler) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    }
+
+    function normalizeAddr(addr) {
+      return (addr || '').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function showBanner(msg) {
+      const banner = document.getElementById('autoSaveBanner');
+      const bannerText = document.getElementById('autoSaveBannerText');
+      if (banner && bannerText) {
+        bannerText.textContent = msg;
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('currentFloorPillar').textContent = `${state.floor} · ${state.pillar}`;
+      document.getElementById('topBannerText').textContent = `현재: ${state.floor} · ${state.pillar}`;
+      document.getElementById('addressBadge').textContent = `📍 ${state.address}`;
+
+      document.querySelectorAll('.floor-btn').forEach(btn => {
+        const active = btn.dataset.floor === state.floor;
+        btn.className = `floor-btn py-3.5 rounded-2xl font-extrabold text-lg ${active ? 'bg-[#E56324] text-white' : 'bg-slate-100 text-slate-800'}`;
+      });
+
+      const previewBox = document.getElementById('photoPreviewBox');
+      const previewImg = document.getElementById('photoPreviewImg');
+      if (state.photoDataUrl) {
+        previewImg.src = state.photoDataUrl;
+        previewBox.classList.remove('hidden');
+      } else {
+        previewBox.classList.add('hidden');
+      }
+
+      const norm = normalizeAddr(state.address);
+      const item = state.cache.find(c => c.norm === norm);
+      if (item) {
+        document.getElementById('probBadge').textContent = `누적 ${item.visits}회 · 확률 ${item.prob}%`;
+      }
+      renderCacheList();
+    }
+
+    function recordAddressVisit(sourceLabel, matchExistingCacheFirst = false) {
+      const norm = normalizeAddr(state.address);
+      let item = state.cache.find(c => c.norm === norm);
+
+      if (item) {
+        if (matchExistingCacheFirst) {
+          state.floor = item.floor;
+          state.pillar = item.pillar;
+        } else {
+          item.floor = state.floor;
+          item.pillar = state.pillar;
+        }
+        item.visits += 1;
+        item.prob = Math.min(99, item.prob + 4);
+      } else {
+        item = { norm, address: state.address, floor: state.floor, pillar: state.pillar, visits: 1, prob: 85 };
+        state.cache.unshift(item);
+      }
+
+      localStorage.setItem('al_floor', state.floor);
+      localStorage.setItem('al_pillar', state.pillar);
+      localStorage.setItem('al_address', state.address);
+      localStorage.setItem('al_address_cache', JSON.stringify(state.cache));
+
+      const timeStr = new Date().toLocaleTimeString('ko-KR');
+      document.getElementById('savedTimeText').textContent = `마지막 기록 (${sourceLabel || '수동'}): ${timeStr}`;
+      updateUI();
+
+      fetch(`${state.gasUrl}?action=saveParking&floor=${encodeURIComponent(state.floor)}&pillar=${encodeURIComponent(state.pillar)}&address=${encodeURIComponent(state.address)}&via=${encodeURIComponent(sourceLabel || 'manual')}`, { mode: 'no-cors' }).catch(() => {});
+    }
+
+    // 📷 1번 기능: 기둥 번호 사진 촬영 & OCR 텍스트(층·구역) 자동 추출
+    function parseFloorAndPillarFromText(rawText) {
+      const clean = (rawText || '').toUpperCase().replace(/[^A-Z0-9\-\s지하층]/g, ' ');
+      let detectedFloor = null;
+      let detectedPillar = null;
+
+      // 층수 패턴 매칭 (B1~B6, 1F, 지하1~6층)
+      const floorMatch = clean.match(/\b(B[1-6]|1F)\b/) || clean.match(/지하\s*([1-6])/);
+      if (floorMatch) {
+        detectedFloor = floorMatch[1].startsWith('B') || floorMatch[1] === '1F' ? floorMatch[1] : `B${floorMatch[1]}`;
+      }
+
+      // 기둥 번호 패턴 매칭 (예: A-01, B-12, C14, D 08 -> C-14 형태로 정규화)
+      const tokens = clean.replace(/\b(B[1-6]|1F)\b/g, '').trim();
+      const pillarMatch = tokens.match(/\b([A-Z])\s*[\-]?\s*(\d{1,3})\b/);
+      if (pillarMatch) {
+        const letter = pillarMatch[1];
+        const num = pillarMatch[2].padStart(2, '0');
+        detectedPillar = `${letter}-${num}`;
+      }
+
+      return { detectedFloor, detectedPillar };
+    }
+
+    async function handleOcrImageFile(file) {
+      if (!file) return;
+      const statusEl = document.getElementById('ocrStatusText');
+      statusEl.classList.remove('hidden');
+      statusEl.textContent = '🔍 사진에서 기둥 번호(층·구역) 인식 중...';
+
+      // 이미지 축소 및 미리보기 저장 (localStorage 용량 최적화)
+      const dataUrl = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxW = 720;
+            const scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.75));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      state.photoDataUrl = dataUrl;
+      localStorage.setItem('al_photo', dataUrl);
+      updateUI();
+
+      try {
+        const result = await Tesseract.recognize(dataUrl, 'eng+kor');
+        const text = (result && result.data && result.data.text) ? result.data.text : '';
+        const { detectedFloor, detectedPillar } = parseFloorAndPillarFromText(text);
+
+        if (detectedFloor) state.floor = detectedFloor;
+        if (detectedPillar) {
+          state.pillar = detectedPillar;
+          document.getElementById('customPillarInput').value = detectedPillar;
+        }
+
+        if (detectedFloor || detectedPillar) {
+          recordAddressVisit('카메라OCR', false);
+          showBanner(`📷 기둥 OCR 인식 완료: ${state.floor} · ${state.pillar}`);
+          statusEl.textContent = `✅ 인식 성공: ${state.floor} · ${state.pillar}`;
+        } else {
+          recordAddressVisit('사진저장', false);
+          statusEl.textContent = '📷 사진 저장 완료 (기둥 글자가 흐려 수동 버튼으로 보정 가능)';
+        }
+      } catch (err) {
+        recordAddressVisit('사진저장', false);
+        statusEl.textContent = '📷 사진이 저장되었습니다.';
+      }
+    }
+
+    // 발열 0% 원샷(One-Shot) 위치 스냅샷 함수
+    function triggerOneShotParkingSave(viaSource) {
+      if (!navigator.geolocation) {
+        recordAddressVisit(viaSource, true);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const speedKmh = (pos.coords.speed || 0) * 3.6;
+        if (speedKmh >= 5) {
+          alert(`주행 중(${speedKmh.toFixed(0)}km/h)에는 자동 저장이 차단됩니다.`);
+          return;
+        }
+
+        state.sLat = pos.coords.latitude;
+        state.sLng = pos.coords.longitude;
+        localStorage.setItem('al_lat', state.sLat);
+        localStorage.setItem('al_lng', state.sLng);
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${state.sLat}&lon=${state.sLng}&accept-language=ko`);
+          const data = await res.json();
+          if (data && data.display_name) {
+            const parts = data.display_name.split(',').map(s => s.trim());
+            state.address = parts.slice(0, 3).reverse().join(' ');
+          }
+        } catch (e) {}
+
+        recordAddressVisit(viaSource, true);
+        showBanner(`✅ ${viaSource} 연결 해제 감지: ${state.floor} · ${state.pillar} 자동 저장 완료!`);
+      }, () => {
+        recordAddressVisit(viaSource, true);
+      }, {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 60000
+      });
+    }
+
+    function renderCacheList() {
+      const box = document.getElementById('cacheListContainer');
+      if (!box) return;
+      if (state.cache.length === 0) {
+        box.innerHTML = '<div class="text-slate-400 py-2">저장된 주소 캐시가 없습니다.</div>';
+        return;
+      }
+      box.innerHTML = state.cache.map((c, idx) => `
+        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div class="min-w-0 pr-2">
+            <div class="font-bold text-slate-800 truncate">${c.address}</div>
+            <div class="text-slate-500">${c.floor} · ${c.pillar} (방문 ${c.visits}회 · ${c.prob}%)</div>
+          </div>
+          <button onclick="deleteCacheItem(${idx})" class="shrink-0 bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-lg">삭제</button>
+        </div>
+      `).join('');
+    }
+
+    window.deleteCacheItem = function(idx) {
+      state.cache.splice(idx, 1);
+      localStorage.setItem('al_address_cache', JSON.stringify(state.cache));
+      updateUI();
+    };
+
+    // API 키 확인 없이 즉시 Code.gs 웹 경로 프록시 호출
+    async function compareWebRoutes() {
+      const q = document.getElementById('destInput').value.trim() || state.destName;
+      state.destName = q;
+
+      if (KNOWN_PLACES[q]) {
+        state.eLat = KNOWN_PLACES[q].lat;
+        state.eLng = KNOWN_PLACES[q].lng;
+      } else {
+        try {
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
+          const geoData = await geoRes.json();
+          if (geoData && geoData[0]) {
+            state.eLat = parseFloat(geoData[0].lat);
+            state.eLng = parseFloat(geoData[0].lon);
+          }
+        } catch (e) {}
+      }
+
+      document.getElementById('kakaoTime').textContent = '조회 중...';
+      document.getElementById('naverTime').textContent = '조회 중...';
+
+      const url = `${state.gasUrl}?action=route&sLat=${state.sLat}&sLng=${state.sLng}&eLat=${state.eLat}&eLng=${state.eLng}`;
+      try {
+        const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+        const data = await res.json();
+
+        if (data.kakao && data.kakao.ok) {
+          document.getElementById('kakaoTime').textContent = `${data.kakao.minutes}분 (${data.kakao.distanceKm}km)`;
+          document.getElementById('kakaoStatus').textContent = data.kakao.statusText;
+          document.getElementById('kakaoBar').style.width = `${Math.min(100, Math.max(20, data.kakao.minutes * 1.5))}%`;
+        } else {
+          document.getElementById('kakaoTime').textContent = '웹 바로보기 ↗';
+          document.getElementById('kakaoStatus').textContent = '탭하면 카카오맵 실시간 길찾기 페이지로 이동합니다.';
+        }
+
+        if (data.naver && data.naver.ok) {
+          document.getElementById('naverTime').textContent = `${data.naver.minutes}분 (${data.naver.distanceKm}km)`;
+          document.getElementById('naverStatus').textContent = data.naver.statusText;
+          document.getElementById('naverBar').style.width = `${Math.min(100, Math.max(20, data.naver.minutes * 1.5))}%`;
+        } else {
+          document.getElementById('naverTime').textContent = '웹 바로보기 ↗';
+          document.getElementById('naverStatus').textContent = '탭하면 네이버 지도 실시간 길찾기 페이지로 이동합니다.';
+        }
+      } catch (err) {
+        document.getElementById('kakaoTime').textContent = '웹 열기 ↗';
+        document.getElementById('naverTime').textContent = '웹 열기 ↗';
+      }
+    }
+
+    // 이벤트 연결
+    on('ocrCameraBtn', 'click', () => document.getElementById('ocrCameraInput').click());
+    on('ocrCameraInput', 'change', e => {
+      if (e.target.files && e.target.files[0]) {
+        handleOcrImageFile(e.target.files[0]);
+      }
+    });
+    on('clearPhotoBtn', 'click', () => {
+      state.photoDataUrl = '';
+      localStorage.removeItem('al_photo');
+      document.getElementById('ocrStatusText').classList.add('hidden');
+      updateUI();
+    });
+
+    document.querySelectorAll('.floor-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.floor = btn.dataset.floor;
+        recordAddressVisit('층수변경', false);
+      });
+    });
+
+    document.querySelectorAll('.pillar-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.pillar = btn.dataset.pillar;
+        recordAddressVisit('기둥변경', false);
+      });
+    });
+
+    on('applyPillarBtn', 'click', () => {
+      const val = document.getElementById('customPillarInput').value.trim().toUpperCase();
+      if (val) {
+        state.pillar = val;
+        recordAddressVisit('기둥입력', false);
+      }
+    });
+
+    on('gpsSaveBtn', 'click', () => triggerOneShotParkingSave('수동저장'));
+
+    document.querySelectorAll('.quick-dest').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('destInput').value = btn.dataset.dest;
+        state.destName = btn.dataset.dest;
+        state.eLat = parseFloat(btn.dataset.lat);
+        state.eLng = parseFloat(btn.dataset.lng);
+        compareWebRoutes();
+      });
+    });
+
+    on('compareRouteBtn', 'click', compareWebRoutes);
+
+    on('kakaoCard', 'click', () => {
+      window.open(`https://map.kakao.com/link/to/${encodeURIComponent(state.destName)},${state.eLat},${state.eLng}`, '_blank');
+    });
+
+    on('naverCard', 'click', () => {
+      window.open(`https://map.naver.com/p/directions/-/${state.eLng},${state.eLat},${encodeURIComponent(state.destName)}/-/car`, '_blank');
+    });
+
+    on('openPostcodeBtn', 'click', () => {
+      new daum.Postcode({
+        oncomplete: function(data) {
+          const addr = data.buildingName || data.roadAddress || data.jibunAddress;
+          document.getElementById('destInput').value = addr;
+          compareWebRoutes();
+        }
+      }).open();
+    });
+
+    on('openSettingsBtn', 'click', () => {
+      const m = document.getElementById('settingsModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    });
+
+    on('closeSettingsBtn', 'click', () => {
+      const m = document.getElementById('settingsModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    });
+
+    on('copyCarplayUrlBtn', 'click', () => {
+      const url = `${location.origin}${location.pathname}?autosave=1&via=carplay`;
+      navigator.clipboard.writeText(url);
+      alert('CarPlay 해제용 자동저장 주소가 복사되었습니다!\n단축어 [자동화 -> CarPlay 연결 해제 시 -> URL 열기]에 붙여넣으세요.');
+    });
+
+    on('copyBtUrlBtn', 'click', () => {
+      const url = `${location.origin}${location.pathname}?autosave=1&via=bluetooth`;
+      navigator.clipboard.writeText(url);
+      alert('블루투스 해제용 자동저장 주소가 복사되었습니다!\n단축어 [자동화 -> Bluetooth 연결 해제 시 -> URL 열기]에 붙여넣으세요.');
+    });
+
+    on('saveGasUrlBtn', 'click', () => {
+      state.gasUrl = document.getElementById('gasUrlInput').value.trim();
+      localStorage.setItem('al_gas_url', state.gasUrl);
+      alert('구글 서버 URL이 저장되었습니다.');
+    });
+
+    on('addCacheTestBtn', 'click', () => recordAddressVisit('중첩테스트', false));
+
+    // URL 파라미터(?autosave=1&via=carplay 또는 bluetooth) 감지 시 단 1회 스냅샷 자동저장 실행
+    window.addEventListener('DOMContentLoaded', () => {
+      updateUI();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autosave') === '1') {
+        const via = (params.get('via') || '').toLowerCase() === 'bluetooth' ? 'Bluetooth' : 'CarPlay';
+        document.getElementById('triggerBadge').textContent = `⚡ ${via} 연결 해제 자동저장 실행됨`;
+        triggerOneShotParkingSave(via);
+      }
+    });
+  </script>
+</body>
+</html>
