@@ -55,6 +55,23 @@
         </div>
       </div>
 
+      <!-- 📡 GPS 현위치 불러오기 & 권한 원클릭 허용 바 -->
+      <div class="flex items-center gap-2 mb-3">
+        <button id="refreshGpsBtn" type="button" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-extrabold text-xs shadow-sm flex items-center justify-center gap-1.5">
+          <span>📡 현위치 GPS 불러오기</span>
+        </button>
+        <button id="mainGrantPermBtn" type="button" class="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-extrabold text-xs shadow-sm flex items-center justify-center gap-1.5">
+          <span>🔓 GPS·카메라·알림 권한설정</span>
+        </button>
+      </div>
+
+      <!-- 권한 상태 요약 배지 바 -->
+      <div id="permStatusBar" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 mb-3 text-[11px] font-bold text-slate-600">
+        <span id="gpsPermBadge">📍 GPS: 확인 중</span>
+        <span id="camPermBadge">📷 카메라: 준비</span>
+        <span id="notiPermBadge">🔔 알림: 대기</span>
+      </div>
+
       <!-- 📷 기둥 번호 카메라 촬영 OCR 자동 인식 버튼 -->
       <div class="mb-3">
         <input id="ocrCameraInput" type="file" accept="image/*" capture="environment" class="hidden" />
@@ -105,11 +122,21 @@
 
     <!-- 2. 홈페이지 기반 실시간 길찾기 비교 (카카오맵 · 네이버 지도 컬러 바 UI) -->
     <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 overflow-hidden">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-black text-slate-900">🧭 실시간 웹 길찾기 동기화 비교</h2>
-        <button id="openPostcodeBtn" class="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg">
-          🔍 주소검색 팝업
-        </button>
+      <div class="flex items-center justify-between gap-1.5 mb-2">
+        <h2 class="text-lg font-black text-slate-900 truncate">🧭 실시간 웹 길찾기 비교</h2>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="routeRefreshGpsBtn" type="button" class="text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg">
+            📡 현위치 갱신
+          </button>
+          <button id="openPostcodeBtn" type="button" class="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg">
+            🔍 주소검색
+          </button>
+        </div>
+      </div>
+
+      <!-- 현재 출발 기준 GPS 표시 -->
+      <div class="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 mb-3 truncate" id="startOriginInfo">
+        출발 기준(GPS): 📍 위치 확인 대기 중
       </div>
 
       <!-- 목적지 입력창 (min-w-0 오버플로우 방지 적용) -->
@@ -159,12 +186,51 @@
     </section>
   </main>
 
-  <!-- ⚙️ 설정 · CarPlay/블루투스 단축어 복사 · 캐시 모달 -->
+  <!-- ⚙️ 설정 · 권한설정 · CarPlay/블루투스 단축어 복사 · 캐시 모달 -->
   <div id="settingsModal" class="fixed inset-0 z-50 bg-black/60 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-5 max-h-[85vh] overflow-y-auto space-y-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-lg font-black">⚙️ CarPlay·블루투스 자동화 & 캐시</h3>
+        <h3 class="text-lg font-black">⚙️ 권한 설정 · 자동화 · 캐시</h3>
         <button id="closeSettingsBtn" class="text-sm font-bold bg-slate-200 px-3 py-1.5 rounded-xl">닫기</button>
+      </div>
+
+      <!-- 🔓 위치(GPS) · 카메라 · 모션 · 알림 통합 권한 설정 -->
+      <div class="bg-blue-50/80 p-3.5 rounded-2xl border border-blue-200 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold text-blue-950">🔓 기기 권한 통합 설정 (GPS · 카메라 · 모션 · 알림)</span>
+          <span id="modalPermSummaryBadge" class="text-[11px] font-extrabold bg-white text-blue-700 px-2 py-0.5 rounded-lg border border-blue-200">확인 가능</span>
+        </div>
+        <button id="grantAllPermissionsBtn" type="button" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-extrabold py-3 rounded-xl text-sm shadow-sm">
+          ✨ 위치(GPS) · 카메라 · 모션 · 알림 모든 권한 한번에 허용
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="modalRefreshGpsBtn" type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs">
+            📡 GPS 현위치 즉시 불러오기
+          </button>
+          <button id="modalCameraPermBtn" type="button" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs">
+            📷 카메라(OCR) 권한 요청
+          </button>
+        </div>
+      </div>
+
+      <!-- 🛡️ 주행 중 자동저장 차단 가드 -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold text-slate-800">🛡️ 주행 중 자동저장 차단 가드 (5km/h 이상 차단)</span>
+          <input id="autoSaveToggle" type="checkbox" checked class="w-5 h-5 accent-[#E56324]" />
+        </div>
+        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold">
+          <span class="text-slate-600">현재 속도 판정:</span>
+          <span id="speedGuardBadge" class="text-emerald-700 font-extrabold">✅ 정차 상태 (0 km/h) · 저장 가능</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="simDrivingBtn" type="button" class="bg-rose-100 text-rose-800 font-bold py-2 rounded-xl text-xs">
+            🚗 주행 중(30km/h) 차단 테스트
+          </button>
+          <button id="simStoppedBtn" type="button" class="bg-emerald-100 text-emerald-800 font-bold py-2 rounded-xl text-xs">
+            🅿️ 정차(0km/h) 자동저장 테스트
+          </button>
+        </div>
       </div>
 
       <!-- CarPlay & Bluetooth 단축어 원클릭 복사 -->
@@ -213,6 +279,8 @@
       eLat: 37.497952,
       eLng: 127.027619,
       destName: '강남역',
+      speedKmh: 0,
+      autoSaveEnabled: localStorage.getItem('al_autosave_enabled') !== '0',
       photoDataUrl: localStorage.getItem('al_photo') || '',
       gasUrl: localStorage.getItem('al_gas_url') || DEFAULT_GAS_URL,
       cache: JSON.parse(localStorage.getItem('al_address_cache') || '[]')
@@ -251,6 +319,13 @@
       document.getElementById('currentFloorPillar').textContent = `${state.floor} · ${state.pillar}`;
       document.getElementById('topBannerText').textContent = `현재: ${state.floor} · ${state.pillar}`;
       document.getElementById('addressBadge').textContent = `📍 ${state.address}`;
+      const startOriginEl = document.getElementById('startOriginInfo');
+      if (startOriginEl) {
+        startOriginEl.textContent = `출발 기준(GPS): 📍 ${state.address} (${state.sLat.toFixed(4)}, ${state.sLng.toFixed(4)})`;
+      }
+
+      const toggleEl = document.getElementById('autoSaveToggle');
+      if (toggleEl) toggleEl.checked = state.autoSaveEnabled;
 
       document.querySelectorAll('.floor-btn').forEach(btn => {
         const active = btn.dataset.floor === state.floor;
@@ -272,6 +347,191 @@
         document.getElementById('probBadge').textContent = `누적 ${item.visits}회 · 확률 ${item.prob}%`;
       }
       renderCacheList();
+    }
+
+    // 🔓 권한 상태 조회 및 배지 업데이트
+    async function checkPermissionStatus() {
+      const gpsBadge = document.getElementById('gpsPermBadge');
+      const camBadge = document.getElementById('camPermBadge');
+      const notiBadge = document.getElementById('notiPermBadge');
+      const summaryBadge = document.getElementById('modalPermSummaryBadge');
+
+      let grantedCount = 0;
+
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const geoPerm = await navigator.permissions.query({ name: 'geolocation' });
+          if (geoPerm.state === 'granted') {
+            if (gpsBadge) gpsBadge.textContent = '📍 GPS: 허용됨 ✅';
+            grantedCount++;
+          } else if (geoPerm.state === 'denied') {
+            if (gpsBadge) gpsBadge.textContent = '📍 GPS: 차단됨 ⚠️';
+          } else {
+            if (gpsBadge) gpsBadge.textContent = '📍 GPS: 허용 대기';
+          }
+          geoPerm.onchange = () => checkPermissionStatus();
+        } catch (e) {}
+
+        try {
+          const camPerm = await navigator.permissions.query({ name: 'camera' });
+          if (camPerm.state === 'granted') {
+            if (camBadge) camBadge.textContent = '📷 카메라: 허용됨 ✅';
+            grantedCount++;
+          } else if (camPerm.state === 'denied') {
+            if (camBadge) camBadge.textContent = '📷 카메라: 차단됨 ⚠️';
+          }
+          camPerm.onchange = () => checkPermissionStatus();
+        } catch (e) {}
+      }
+
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          if (notiBadge) notiBadge.textContent = '🔔 알림: 허용됨 ✅';
+          grantedCount++;
+        } else if (Notification.permission === 'denied') {
+          if (notiBadge) notiBadge.textContent = '🔔 알림: 차단됨 ⚠️';
+        } else {
+          if (notiBadge) notiBadge.textContent = '🔔 알림: 허용 대기';
+        }
+      }
+
+      if (summaryBadge) {
+        summaryBadge.textContent = grantedCount >= 2 ? '✅ 주요 권한 허용됨' : '권한 허용 필요';
+      }
+    }
+
+    // 📡 현위치 GPS 권한 요청 및 실시간 주소 불러오기
+    function refreshCurrentGPS(silent = false, onDone = null) {
+      const gpsBadge = document.getElementById('gpsPermBadge');
+      if (!navigator.geolocation) {
+        if (!silent) alert('현재 브라우저에서 GPS 위치 기능을 지원하지 않습니다.');
+        if (onDone) onDone();
+        return;
+      }
+
+      if (!silent) {
+        document.getElementById('addressBadge').textContent = '📡 GPS 위성 신호 수신 중...';
+      }
+
+      navigator.geolocation.getCurrentPosition(async pos => {
+        state.sLat = pos.coords.latitude;
+        state.sLng = pos.coords.longitude;
+        state.speedKmh = Math.max(0, Math.round((pos.coords.speed || 0) * 3.6));
+        localStorage.setItem('al_lat', state.sLat);
+        localStorage.setItem('al_lng', state.sLng);
+
+        if (gpsBadge) gpsBadge.textContent = '📍 GPS: 허용됨 ✅';
+
+        const speedBadge = document.getElementById('speedGuardBadge');
+        if (speedBadge) {
+          if (state.speedKmh >= 5) {
+            speedBadge.textContent = `⛔ 주행 중 (${state.speedKmh} km/h) · 자동저장 차단`;
+            speedBadge.className = 'text-rose-600 font-extrabold';
+          } else {
+            speedBadge.textContent = `✅ 정차 상태 (${state.speedKmh} km/h) · 저장 가능`;
+            speedBadge.className = 'text-emerald-700 font-extrabold';
+          }
+        }
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${state.sLat}&lon=${state.sLng}&accept-language=ko`);
+          const data = await res.json();
+          if (data && data.address) {
+            const a = data.address;
+            const city = a.city || a.province || a.state || '';
+            const borough = a.borough || a.county || a.suburb || a.town || '';
+            const road = a.road || a.neighbourhood || a.quarter || a.village || '';
+            const num = a.house_number || '';
+            const built = [city, borough, road, num].filter(Boolean).join(' ').trim();
+            if (built) {
+              state.address = built;
+            } else if (data.display_name) {
+              const parts = data.display_name.split(',').map(s => s.trim());
+              state.address = parts.slice(0, 3).reverse().join(' ');
+            }
+          } else if (data && data.display_name) {
+            const parts = data.display_name.split(',').map(s => s.trim());
+            state.address = parts.slice(0, 3).reverse().join(' ');
+          }
+          localStorage.setItem('al_address', state.address);
+        } catch (e) {}
+
+        updateUI();
+        checkPermissionStatus();
+        if (!silent) {
+          showBanner(`📡 현위치 GPS 불러오기 완료: ${state.address}`);
+        }
+        if (onDone) onDone();
+      }, err => {
+        if (gpsBadge) {
+          gpsBadge.textContent = err && err.code === 1 ? '📍 GPS: 권한 거부됨 ⚠️' : '📍 GPS: 신호 대기';
+        }
+        updateUI();
+        if (!silent) {
+          if (err && err.code === 1) {
+            alert('위치(GPS) 권한이 거부되어 있습니다.\n브라우저 주소창 왼쪽 자물쇠(🔒) 또는 기기 [설정 -> 개인정보 보호 -> 위치 서비스]에서 위치 권한을 [허용]으로 변경해 주세요.');
+          } else {
+            showBanner('⚠️ 실내/지하에서 GPS 신호가 약해 최근 저장 위치를 유지합니다.');
+          }
+        }
+        if (onDone) onDone();
+      }, {
+        enableHighAccuracy: true,
+        timeout: 7000,
+        maximumAge: 15000
+      });
+    }
+
+    // 📷 카메라(OCR) 권한 요청 함수
+    async function requestCameraPermission(silent = false) {
+      const camBadge = document.getElementById('camPermBadge');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (!silent) alert('현재 브라우저에서 카메라 권한 API를 지원하지 않습니다. [기둥 번호 사진 찍어 자동 입력] 버튼을 눌러 촬영해 주세요.');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream.getTracks().forEach(track => track.stop());
+        if (camBadge) camBadge.textContent = '📷 카메라: 허용됨 ✅';
+        checkPermissionStatus();
+        if (!silent) {
+          showBanner('📷 카메라(OCR) 권한이 정상 허용되었습니다!');
+        }
+      } catch (e) {
+        if (camBadge) camBadge.textContent = '📷 카메라: 권한 필요 ⚠️';
+        if (!silent) {
+          alert('카메라 권한이 거부되었거나 사용할 수 없습니다.\n주소창 왼쪽 설정(🔒)에서 카메라 권한을 허용해 주세요.');
+        }
+      }
+    }
+
+    // ✨ 위치(GPS) · 카메라 · 모션센서 · 알림 모든 권한 한번에 허용
+    async function requestAllPermissions(silent = false) {
+      try {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          await DeviceMotionEvent.requestPermission().catch(() => {});
+        }
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          await DeviceOrientationEvent.requestPermission().catch(() => {});
+        }
+      } catch (e) {}
+
+      try {
+        if ('Notification' in window && Notification.permission !== 'granted') {
+          await Notification.requestPermission().catch(() => {});
+        }
+      } catch (e) {}
+
+      await requestCameraPermission(true);
+
+      refreshCurrentGPS(silent, () => {
+        checkPermissionStatus();
+        const summaryBadge = document.getElementById('modalPermSummaryBadge');
+        if (summaryBadge) summaryBadge.textContent = '✅ 모든 권한 활성화됨';
+        if (!silent) {
+          showBanner('✅ 위치(GPS) · 카메라 · 모션 · 알림 권한 설정 및 현위치 갱신 완료!');
+        }
+      });
     }
 
     function recordAddressVisit(sourceLabel, matchExistingCacheFirst = false) {
@@ -386,6 +646,11 @@
 
     // 발열 0% 원샷(One-Shot) 위치 스냅샷 함수
     function triggerOneShotParkingSave(viaSource) {
+      if (!state.autoSaveEnabled && viaSource !== '수동저장') {
+        showBanner('ℹ️ 자동 저장이 설정에서 비활성화되어 있습니다.');
+        return;
+      }
+
       if (!navigator.geolocation) {
         recordAddressVisit(viaSource, true);
         return;
@@ -403,23 +668,35 @@
         localStorage.setItem('al_lat', state.sLat);
         localStorage.setItem('al_lng', state.sLng);
 
+        const gpsBadge = document.getElementById('gpsPermBadge');
+        if (gpsBadge) gpsBadge.textContent = '📍 GPS: 허용됨 ✅';
+
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${state.sLat}&lon=${state.sLng}&accept-language=ko`);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&lat=${state.sLat}&lon=${state.sLng}&accept-language=ko`);
           const data = await res.json();
-          if (data && data.display_name) {
+          if (data && data.address) {
+            const a = data.address;
+            const city = a.city || a.province || a.state || '';
+            const borough = a.borough || a.county || a.suburb || a.town || '';
+            const road = a.road || a.neighbourhood || a.quarter || a.village || '';
+            const num = a.house_number || '';
+            const built = [city, borough, road, num].filter(Boolean).join(' ').trim();
+            if (built) state.address = built;
+          } else if (data && data.display_name) {
             const parts = data.display_name.split(',').map(s => s.trim());
             state.address = parts.slice(0, 3).reverse().join(' ');
           }
         } catch (e) {}
 
         recordAddressVisit(viaSource, true);
-        showBanner(`✅ ${viaSource} 연결 해제 감지: ${state.floor} · ${state.pillar} 자동 저장 완료!`);
+        showBanner(`✅ ${viaSource} 위치 저장 완료: ${state.floor} · ${state.pillar} (${state.address})`);
       }, () => {
         recordAddressVisit(viaSource, true);
+        showBanner(`📌 ${viaSource} 저장 완료: ${state.floor} · ${state.pillar}`);
       }, {
-        enableHighAccuracy: false,
-        timeout: 5000,
-        maximumAge: 60000
+        enableHighAccuracy: true,
+        timeout: 6000,
+        maximumAge: 30000
       });
     }
 
@@ -497,7 +774,41 @@
       }
     }
 
-    // 이벤트 연결
+    // GPS 및 권한 설정 버튼 이벤트 연결
+    on('refreshGpsBtn', 'click', () => refreshCurrentGPS(false));
+    on('routeRefreshGpsBtn', 'click', () => refreshCurrentGPS(false, () => compareWebRoutes()));
+    on('modalRefreshGpsBtn', 'click', () => refreshCurrentGPS(false));
+    on('mainGrantPermBtn', 'click', () => requestAllPermissions(false));
+    on('grantAllPermissionsBtn', 'click', () => requestAllPermissions(false));
+    on('modalCameraPermBtn', 'click', () => requestCameraPermission(false));
+
+    on('autoSaveToggle', 'change', e => {
+      state.autoSaveEnabled = e.target.checked;
+      localStorage.setItem('al_autosave_enabled', state.autoSaveEnabled ? '1' : '0');
+    });
+
+    on('simDrivingBtn', 'click', () => {
+      state.speedKmh = 30;
+      const badge = document.getElementById('speedGuardBadge');
+      if (badge) {
+        badge.textContent = '⛔ 주행 중 (30 km/h) · 자동저장 차단됨';
+        badge.className = 'text-rose-600 font-extrabold';
+      }
+      showBanner('⛔ 주행 중(30km/h) 감지 — 자동 저장이 안전하게 차단되었습니다.');
+    });
+
+    on('simStoppedBtn', 'click', () => {
+      state.speedKmh = 0;
+      const badge = document.getElementById('speedGuardBadge');
+      if (badge) {
+        badge.textContent = '✅ 정차 확인 (0 km/h) · 자동저장 완료';
+        badge.className = 'text-emerald-700 font-extrabold';
+      }
+      recordAddressVisit('정차자동저장', false);
+      showBanner(`✅ 정차(0km/h) 확인 후 ${state.floor} · ${state.pillar} 자동 저장 완료!`);
+    });
+
+    // 기존 이벤트 연결
     on('ocrCameraBtn', 'click', () => document.getElementById('ocrCameraInput').click());
     on('ocrCameraInput', 'change', e => {
       if (e.target.files && e.target.files[0]) {
@@ -569,6 +880,7 @@
       const m = document.getElementById('settingsModal');
       m.classList.remove('hidden');
       m.classList.add('flex');
+      checkPermissionStatus();
     });
 
     on('closeSettingsBtn', 'click', () => {
@@ -597,14 +909,17 @@
 
     on('addCacheTestBtn', 'click', () => recordAddressVisit('중첩테스트', false));
 
-    // URL 파라미터(?autosave=1&via=carplay 또는 bluetooth) 감지 시 단 1회 스냅샷 자동저장 실행
+    // 앱 시작 시 자동으로 권한 상태 체크 & 현위치 GPS 불러오기 + URL 파라미터(?autosave=1) 감지
     window.addEventListener('DOMContentLoaded', () => {
       updateUI();
+      checkPermissionStatus();
       const params = new URLSearchParams(window.location.search);
       if (params.get('autosave') === '1') {
         const via = (params.get('via') || '').toLowerCase() === 'bluetooth' ? 'Bluetooth' : 'CarPlay';
         document.getElementById('triggerBadge').textContent = `⚡ ${via} 연결 해제 자동저장 실행됨`;
         triggerOneShotParkingSave(via);
+      } else {
+        refreshCurrentGPS(true);
       }
     });
   </script>
