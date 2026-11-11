@@ -261,21 +261,16 @@ function handleGasKeyless3NavCompare_(data) {
       var nwJson = JSON.parse(nwRes.getContentText());
       var routeMap = nwJson.route || {};
       var optArr = routeMap["3,0,0,0,0,0"] || routeMap["3,0,0,0,0,0,1"] || [];
-      var multiArr = routeMap["3,0,0,0,0,0,1"] || [];
-      var comfortArr = routeMap["2,0,0,0,0,0"] || routeMap["9,0,0,0,0,0"] || [];
 
       if (optArr.length > 0) {
+        // 실시간 추천 1순위 경로로 고정
         naverOptimalData = parseNaverPreviewRoute_(optArr[0]);
-      }
-      if (multiArr.length > 1) {
-        naverAltData = parseNaverPreviewRoute_(multiArr[1]);
-      } else if (comfortArr.length > 0) {
-        naverAltData = parseNaverPreviewRoute_(comfortArr[0]);
+        naverAltData = naverOptimalData;
       }
     }
   } catch (e) {}
 
-  // [2] 카카오맵 PC 웹 길찾기 호출 시도 (실패 시 네이버 멀티경로/실시간 교통 데이터 활용)
+  // [2] 카카오맵 PC 웹 길찾기 호출 시도 (실시간 추천 모드 SHORTEST_REALTIME 고정)
   try {
     var sCoord = wgs84ToWcongnamul_(startLat, startLng);
     var eCoord = wgs84ToWcongnamul_(destLat, destLng);
@@ -310,12 +305,12 @@ function handleGasKeyless3NavCompare_(data) {
     }
   } catch (e) {}
 
-  // [3] OSRM 실도로 다중 경로 및 교차로 신호 정밀 분석
+  // [3] OSRM 실도로 1순위 실시간 추천 경로 정밀 분석 (고정 계수 적용)
   var osrmRoutes = [];
   try {
     var osrmUrl = "https://router.project-osrm.org/route/v1/driving/" +
       startLng + "," + startLat + ";" + destLng + "," + destLat +
-      "?alternatives=true&steps=true&overview=false";
+      "?alternatives=false&steps=true&overview=false";
     var oRes = UrlFetchApp.fetch(osrmUrl, { muteHttpExceptions: true });
     if (oRes.getResponseCode() === 200) {
       var oJson = JSON.parse(oRes.getContentText());
@@ -325,15 +320,10 @@ function handleGasKeyless3NavCompare_(data) {
     }
   } catch (e) {}
 
-  var kstHour = Number(Utilities.formatDate(new Date(), "GMT+9", "HH"));
-  var trafficFactor = 1.25;
-  if ((kstHour >= 7 && kstHour <= 10) || (kstHour >= 17 && kstHour <= 20)) {
-    trafficFactor = 1.45;
-  } else if (kstHour >= 22 || kstHour <= 5) {
-    trafficFactor = 1.02;
-  }
+  // 실시간 추천 고정 계수 (시간대에 따라 변동하지 않도록 고정)
+  var trafficFactor = 1.24;
 
-  function analyzeRouteObj(routeObj, routeVariantIdx) {
+  function analyzeRouteObj(routeObj) {
     var distMeters = (routeObj && routeObj.distance) ? routeObj.distance : 5000;
     var km = (distMeters / 1000).toFixed(1);
     var steps = (routeObj && routeObj.legs && routeObj.legs[0] && routeObj.legs[0].steps) ? routeObj.legs[0].steps : [];
@@ -353,17 +343,17 @@ function handleGasKeyless3NavCompare_(data) {
       var name = (st.name || "").trim();
       if (name && mainRoads.indexOf(name) === -1) mainRoads.push(name);
       var isHighway = /(고속도로|도시고속|순환|대교|터널|간선|대로)/.test(name) && d > 800;
-      var sigSec = isHighway ? 8 : 26;
-      var stepSec = (dur * (isHighway ? 1.15 : trafficFactor)) + sigSec;
+      var sigSec = isHighway ? 8 : 22;
+      var stepSec = (dur * (isHighway ? (trafficFactor * 0.96) : (trafficFactor * 1.10))) + sigSec;
       totalSec += stepSec;
 
       var spd = Math.max(8, Math.round((d / 1000) / (stepSec / 3600)));
       var state = "smooth";
-      if (spd < 19 || (!isHighway && (i + routeVariantIdx) % 4 === 1)) {
+      if (spd < 19) {
         state = "jam";
         jamM += d;
         if (name && jammedNames.indexOf(name) === -1) jammedNames.push(name);
-      } else if (spd < 35 || (i + routeVariantIdx) % 3 === 0) {
+      } else if (spd < 30) {
         state = "slow";
         slowM += d;
         if (name && jammedNames.indexOf(name) === -1 && jammedNames.length < 3) jammedNames.push(name);
@@ -405,30 +395,26 @@ function handleGasKeyless3NavCompare_(data) {
       jamPct: jPct,
       segments: segments,
       statusText: jammedNames.length > 0
-        ? ("⚠️ 지체·서행 구간: " + jammedNames.slice(0, 3).join(", "))
-        : ("✅ 주요 도로(" + (mainRoads.slice(0, 3).join(" → ") || "실도로 경로") + ") 소통 원활")
+        ? ("⚠️ 실시간 추천 지체·서행: " + jammedNames.slice(0, 3).join(", "))
+        : ("✅ 실시간 추천 경로(" + (mainRoads.slice(0, 3).join(" → ") || "실도로 추천") + ") 소통 원활")
     };
   }
 
   var primaryRoute = osrmRoutes[0] || null;
-  var altRoute = osrmRoutes[1] || osrmRoutes[0] || null;
-
-  var naverAnalyzed = naverOptimalData || analyzeRouteObj(altRoute, 1);
-  var kakaoAnalyzed = naverAltData || naverOptimalData || analyzeRouteObj(primaryRoute, 0);
+  var fixedRecommended = naverOptimalData || analyzeRouteObj(primaryRoute);
   if (kakaoWebData) {
-    kakaoAnalyzed.distanceKm = kakaoWebData.distanceKm;
-    kakaoAnalyzed.durationMin = kakaoWebData.durationMin;
-    kakaoAnalyzed.minutes = kakaoWebData.minutes;
+    fixedRecommended.distanceKm = kakaoWebData.distanceKm;
+    fixedRecommended.durationMin = kakaoWebData.durationMin;
+    fixedRecommended.minutes = kakaoWebData.minutes;
   }
-
-  var appleAnalyzed = analyzeRouteObj(primaryRoute, 2);
 
   return {
     status: "success",
+    mode: "REALTIME_RECOMMENDED_FIXED",
     source: naverOptimalData ? "NAVER_LIVE_TRAFFIC_API" : "OSRM_REAL_ROAD_ENGINE",
-    kakao: kakaoAnalyzed,
-    naver: naverAnalyzed,
-    apple: appleAnalyzed
+    kakao: fixedRecommended,
+    naver: fixedRecommended,
+    apple: fixedRecommended
   };
 }
 

@@ -115,22 +115,20 @@ const server = http.createServer(async (req, res) => {
                 minutes: mins,
                 tollFare: sum.tollFare || 0,
                 taxiFare: sum.taxiFare || 0,
-                label: sum.label || allRoads[0] || '실시간 최적',
+                label: sum.label || allRoads[0] || '실시간 추천',
                 congestedRoads: jammed.slice(0, 4),
                 statusText: jammed.length > 0
-                  ? `⚠️ 실시간 서행·정체: ${jammed.slice(0, 3).join(', ')}`
-                  : `✅ 주요경로(${sum.label || allRoads.slice(0, 2).join('·') || '실시간 최적'}) 소통 원활`
+                  ? `⚠️ 실시간 추천 서행·정체: ${jammed.slice(0, 3).join(', ')}`
+                  : `✅ 실시간 추천 경로(${sum.label || allRoads.slice(0, 2).join('·') || '실시간 추천'}) 소통 원활`
               };
             };
 
             const optArr = routeMap['3,0,0,0,0,0'] || routeMap['3,0,0,0,0,0,1'] || [];
-            const multiArr = routeMap['3,0,0,0,0,0,1'] || [];
-            const comfortArr = routeMap['2,0,0,0,0,0'] || [];
-
-            if (optArr[0]) result.naver = parseNaverRoute(optArr[0]);
-            if (multiArr[1]) result.kakao = parseNaverRoute(multiArr[1]);
-            else if (comfortArr[0]) result.kakao = parseNaverRoute(comfortArr[0]);
-            else if (optArr[0]) result.kakao = parseNaverRoute(optArr[0]);
+            if (optArr[0]) {
+              const fixedRecommended = parseNaverRoute(optArr[0]);
+              result.naver = fixedRecommended;
+              result.kakao = fixedRecommended;
+            }
           }
         } catch (e) {}
 
