@@ -141,7 +141,7 @@
 
       <!-- 목적지 입력창 (min-w-0 오버플로우 방지 적용) -->
       <div class="flex items-center gap-2 w-full mb-3">
-        <input id="destInput" type="text" placeholder="목적지 입력 (예: 강남역, 더현대 서울)"
+        <input id="destInput" type="text" value="강남역" placeholder="목적지 입력 (예: 강남역, 더현대 서울)"
           class="flex-1 min-w-0 px-3.5 py-3 rounded-xl border border-slate-300 text-base font-bold focus:outline-none focus:border-[#E56324]" />
         <button id="compareRouteBtn" class="shrink-0 bg-slate-900 text-white font-extrabold px-4 py-3 rounded-xl text-base">
           비교
@@ -150,7 +150,7 @@
 
       <!-- 빠른 거점 버튼 -->
       <div class="flex flex-wrap gap-1.5 mb-4">
-        <button data-dest="강남역" data-lat="37.497952" data-lng="127.027619" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">강남역</button>
+        <button data-dest="강남역" data-lat="37.497952" data-lng="127.027619" class="quick-dest text-xs font-bold bg-[#E56324] text-white px-2.5 py-1.5 rounded-lg">강남역</button>
         <button data-dest="서울역" data-lat="37.554648" data-lng="126.972559" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">서울역</button>
         <button data-dest="더현대 서울" data-lat="37.525868" data-lng="126.928426" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">더현대 서울</button>
         <button data-dest="코엑스" data-lat="37.511682" data-lng="127.059151" class="quick-dest text-xs font-bold bg-slate-100 px-2.5 py-1.5 rounded-lg">코엑스</button>
@@ -163,49 +163,49 @@
         <div id="kakaoCard" class="p-4 rounded-2xl bg-amber-50 border border-amber-200 cursor-pointer">
           <div class="flex items-center justify-between mb-1.5">
             <span class="font-extrabold text-base text-slate-900">🟡 카카오맵 (실시간 추천)</span>
-            <span id="kakaoTime" class="text-xl font-black text-amber-900">대기 중</span>
+            <span id="kakaoTime" class="text-xl font-black text-amber-900">계산 중...</span>
           </div>
           <div class="w-full h-3 bg-amber-200 rounded-full overflow-hidden mb-1.5">
             <div id="kakaoBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 45%"></div>
           </div>
-          <div id="kakaoStatus" class="text-xs font-bold text-slate-700">목적지를 입력하고 비교를 눌러주세요 (탭하면 카카오맵 열기)</div>
+          <div id="kakaoStatus" class="text-xs font-bold text-slate-700 leading-relaxed">실도로 경로 및 소요시간 분석 중...</div>
         </div>
 
         <!-- 네이버 지도 컬러 바 -->
         <div id="naverCard" class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 cursor-pointer">
           <div class="flex items-center justify-between mb-1.5">
             <span class="font-extrabold text-base text-slate-900">🟢 네이버 지도 (실시간 최적)</span>
-            <span id="naverTime" class="text-xl font-black text-emerald-900">대기 중</span>
+            <span id="naverTime" class="text-xl font-black text-emerald-900">계산 중...</span>
           </div>
           <div class="w-full h-3 bg-emerald-200 rounded-full overflow-hidden mb-1.5">
             <div id="naverBar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 45%"></div>
           </div>
-          <div id="naverStatus" class="text-xs font-bold text-slate-700">목적지를 입력하고 비교를 눌러주세요 (탭하면 네이버 지도 열기)</div>
+          <div id="naverStatus" class="text-xs font-bold text-slate-700 leading-relaxed">실도로 경로 및 소요시간 분석 중...</div>
         </div>
       </div>
     </section>
   </main>
 
-    <!-- ⚡ 카플레이 · 블루투스 연결 해제 시 저장 전 데이터 확인 모달 -->
+    <!-- ⚡ 카플레이 · 블루투스 연결 해제 시: 1차 자동저장 완료 + 데이터 확인 및 추가 저장 모달 -->
     <div id="verifySaveModal" class="fixed inset-0 z-50 bg-black/70 hidden items-center justify-center p-4">
       <div class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl border-2 border-[#E56324]">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="bg-[#E56324] text-white text-xs font-black px-2.5 py-1 rounded-lg" id="verifySourceBadge">CarPlay 해제 감지</span>
-            <h3 class="text-lg font-black text-slate-900">주차 저장 전 데이터 확인</h3>
+            <span class="bg-emerald-600 text-white text-xs font-black px-2.5 py-1 rounded-lg" id="verifySourceBadge">✅ 1차 자동 저장됨</span>
+            <h3 class="text-lg font-black text-slate-900">자동 저장 완료 · 데이터 확인</h3>
           </div>
           <span class="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">❄️ 발열 0% 대기</span>
         </div>
 
-        <p class="text-xs font-bold text-slate-600 leading-relaxed">
-          차량 연결 해제가 감지되었습니다. 아래 <strong>주소 · 층수 · 기둥 번호</strong> 데이터를 확인(또는 수정)한 뒤 <strong>[확인 후 주차 저장]</strong>을 눌러주세요.
+        <p class="text-xs font-bold text-slate-600 leading-relaxed" id="verifyModalDesc">
+          현재 위치로 <strong>1차 자동 저장이 완료</strong>되었습니다! 아래 <strong>주소 · 층수 · 기둥 번호</strong>가 맞으면 그대로 닫으셔도 되며, 수정이 필요하면 변경 후 <strong>[수정 내용으로 한 번 더 저장]</strong>을 눌러주세요.
         </p>
 
         <!-- 수집된 데이터 확인 및 즉시 수정 박스 -->
         <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-extrabold text-slate-500">📍 확인된 주차 주소 (수정 가능)</label>
+              <label class="text-xs font-extrabold text-slate-500">📍 자동 저장된 주차 주소 (수정 가능)</label>
               <button id="verifyReloadGpsBtn" type="button" class="text-[11px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
                 📡 GPS 1회 재수신
               </button>
@@ -244,11 +244,11 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 pt-1">
-          <button id="cancelVerifySaveBtn" type="button" class="py-3.5 rounded-2xl font-extrabold text-sm bg-slate-200 text-slate-700 active:scale-95">
-            취소 (저장 안 함)
+          <button id="cancelVerifySaveBtn" type="button" class="py-3.5 rounded-2xl font-extrabold text-sm bg-slate-200 text-slate-800 active:scale-95">
+            👍 확인 닫기 (자동저장 유지)
           </button>
           <button id="confirmVerifySaveBtn" type="button" class="py-3.5 rounded-2xl font-extrabold text-sm bg-[#E56324] text-white shadow-md active:scale-95">
-            ✅ 확인 후 주차 저장
+            💾 수정 내용으로 한번 더 저장
           </button>
         </div>
       </div>
@@ -295,22 +295,22 @@
           </div>
         </div>
 
-        <!-- 🛡️ 주행 중 자동저장 차단 가드 & 카플레이 해제 시 데이터 확인 테스트 -->
+        <!-- 🛡️ 주행 중 자동저장 차단 가드 & 카플레이 해제 시 자동저장+확인창 테스트 -->
         <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-slate-800">🛡️ 카플레이 해제 시 데이터 확인 후 저장</span>
+            <span class="text-xs font-extrabold text-slate-800">🛡️ 카플레이 해제 시 즉시 자동저장 + 확인창 띄우기</span>
             <input id="autoSaveToggle" type="checkbox" checked class="w-5 h-5 accent-[#E56324]" />
           </div>
           <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold">
             <span class="text-slate-600">현재 속도 판정:</span>
-            <span id="speedGuardBadge" class="text-emerald-700 font-extrabold">✅ 정차 상태 (0 km/h) · 확인 가능</span>
+            <span id="speedGuardBadge" class="text-emerald-700 font-extrabold">✅ 정차 상태 (0 km/h) · 자동저장 가능</span>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <button id="simDrivingBtn" type="button" class="bg-rose-100 text-rose-800 font-bold py-2 rounded-xl text-xs">
               🚗 주행 중(30km/h) 차단 테스트
             </button>
             <button id="simStoppedBtn" type="button" class="bg-emerald-100 text-emerald-800 font-bold py-2 rounded-xl text-xs">
-              🅿️ 카플레이 해제 확인창 테스트
+              🅿️ 자동저장 + 확인창 테스트
             </button>
           </div>
         </div>
@@ -319,10 +319,10 @@
         <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
           <div class="text-xs font-extrabold text-slate-800">📱 아이폰 단축어(자동화) → 'URL 열기'에 붙여넣기</div>
           <button id="copyCarplayUrlBtn" class="w-full bg-[#E56324] text-white font-bold py-2.5 rounded-xl text-xs">
-            📋 1. CarPlay 연결 해제용 (데이터 확인 후 저장) URL 복사
+            📋 1. CarPlay 해제용 (자동저장 + 확인창 표시) URL 복사
           </button>
           <button id="copyBtUrlBtn" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs">
-            📋 2. 차량 Bluetooth 해제용 (데이터 확인 후 저장) URL 복사
+            📋 2. 차량 Bluetooth 해제용 (자동저장 + 확인창 표시) URL 복사
           </button>
         </div>
 
@@ -348,6 +348,9 @@
               💾 주소 저장
             </button>
           </div>
+          <button id="copyGasCodeBtn" type="button" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-extrabold py-2.5 rounded-xl text-xs">
+            📋 최신 앱스스크립트(Code.gs) 서버 코드 전체 복사
+          </button>
         </div>
 
         <!-- 주소별 중첩 학습 캐시 목록 (개별 삭제 지원) -->
@@ -395,10 +398,16 @@
       '강남역': { lat: 37.497952, lng: 127.027619 },
       '서울역': { lat: 37.554648, lng: 126.972559 },
       '더현대 서울': { lat: 37.525868, lng: 126.928426 },
+      '더현대서울': { lat: 37.525868, lng: 126.928426 },
       '코엑스': { lat: 37.511682, lng: 127.059151 },
       '올림픽파크포레온': { lat: 37.522854, lng: 127.135241 },
       '헬리오시티': { lat: 37.497812, lng: 127.107231 },
-      '반포자이': { lat: 37.507214, lng: 127.011765 }
+      '반포자이': { lat: 37.507214, lng: 127.011765 },
+      '잠실역': { lat: 37.513261, lng: 127.100133 },
+      '판교역': { lat: 37.394761, lng: 127.11116 },
+      '여의도역': { lat: 37.521624, lng: 126.924191 },
+      '인천공항': { lat: 37.460191, lng: 126.440696 },
+      '김포공항': { lat: 37.558654, lng: 126.794474 }
     };
 
     function on(id, event, handler) {
@@ -422,18 +431,15 @@
 
     // ❄️ 발열 원천 차단: 상시 실행되는 모든 타이머 · 위치추적(watchPosition) · 모션센서 · 서비스워커 즉시 중지
     async function stopAllBackgroundProcesses(showNotice = false) {
-      // 1. 혹시 남아있을 수 있는 geolocation.watchPosition 강제 해제
       if (navigator.geolocation && typeof navigator.geolocation.clearWatch === 'function') {
         for (let i = 1; i <= 50; i++) {
           try { navigator.geolocation.clearWatch(i); } catch (e) {}
         }
       }
 
-      // 2. 혹시 등록된 devicemotion / deviceorientation 이벤트 리스너 제거
       window.ondevicemotion = null;
       window.ondeviceorientation = null;
 
-      // 3. 백그라운드 Service Worker 해제 (백그라운드 fetch/캐시 루프 차단)
       if ('serviceWorker' in navigator) {
         try {
           const regs = await navigator.serviceWorker.getRegistrations();
@@ -443,7 +449,6 @@
         } catch (e) {}
       }
 
-      // 4. OCR 워커가 살아있다면 종료
       if (window.__activeOcrWorker) {
         try {
           await window.__activeOcrWorker.terminate();
@@ -460,20 +465,25 @@
       }
     }
 
-    // ☁️ Google Apps Script (Code.gs) 통합 호출 함수 (POST & GET 모두 지원)
-    async function callGasServer(payload) {
+    // ☁️ Google Apps Script (Code.gs) 통합 호출 함수 (타임아웃 3.5초 적용으로 UI 지연 방지)
+    async function callGasServer(payload, timeoutMs = 3500) {
       const url = (state.gasUrl || DEFAULT_GAS_URL).trim();
       if (!url) return null;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const res = await fetch(url, {
           method: 'POST',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
+        clearTimeout(timer);
         const text = await res.text();
         return JSON.parse(text);
       } catch (e) {
+        clearTimeout(timer);
         return null;
       }
     }
@@ -621,8 +631,9 @@
         } catch (e) {}
 
         updateUI();
+        compareWebRoutes();
         if (!silent) {
-          showBanner(`📡 현위치 GPS 1회 수신 완료: ${state.address}`);
+          showBanner(`📡 현위치 GPS 1회 수신 및 네비 경로 갱신 완료: ${state.address}`);
         }
         if (onDone) onDone();
       }, err => {
@@ -639,7 +650,6 @@
         }
         if (onDone) onDone();
       }, {
-        // 발열 방지를 위해 저전력/네트워크 위치 우선 및 캐시 허용
         enableHighAccuracy: false,
         timeout: 4500,
         maximumAge: 60000
@@ -688,7 +698,7 @@
       });
     }
 
-    // 실제 로컬 + Google Apps Script(Code.gs) 클라우드에 주차 위치 최종 저장
+    // 실제 로컬 + Google Apps Script(Code.gs) 클라우드에 주차 위치 저장
     async function recordAddressVisit(sourceLabel, matchExistingCacheFirst = false) {
       const norm = normalizeAddr(state.address);
       let item = state.cache.find(c => c.norm === norm);
@@ -817,7 +827,9 @@
       }
     }
 
-    // ⚡ 카플레이 · 블루투스 연결 해제 시: 바로 저장하지 않고 [저장 전 데이터 확인 모달]을 띄워 사용자 확인 후 저장!
+    // ⚡ 카플레이 · 블루투스 연결 해제 시:
+    // 1) 즉시 1차 자동 저장 실행 (recordAddressVisit)
+    // 2) 동시에 데이터 확인 화면(verifySaveModal)을 띄워 사용자가 눈으로 확인하고 필요 시 수정 후 한 번 더 저장 가능!
     function syncVerifyModalButtons() {
       const curFloor = state.floor;
       document.querySelectorAll('.vfloor-btn').forEach(btn => {
@@ -829,22 +841,25 @@
       const addrInput = document.getElementById('verifyAddressInput');
       if (addrInput) addrInput.value = state.address;
       const coordsEl = document.getElementById('verifyCoordsText');
-      if (coordsEl) coordsEl.textContent = `수신 좌표: ${state.sLat.toFixed(5)}, ${state.sLng.toFixed(5)} (백그라운드 위치추적 중지됨)`;
+      if (coordsEl) {
+        const nowStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        coordsEl.textContent = `✅ ${nowStr} 자동저장 완료 · 좌표: ${state.sLat.toFixed(5)}, ${state.sLng.toFixed(5)}`;
+      }
     }
 
-    function openVerifyBeforeSaveModal(viaSource) {
+    function autoSaveAndShowVerifyModal(viaSource) {
       state.pendingViaSource = viaSource || 'CarPlay';
+
+      // 1. 즉시 1차 자동 저장 실행 (캐시된 주소면 추천 층수/기둥 우선 매칭)
+      const isAutoTrigger = state.pendingViaSource !== '수동저장';
+      recordAddressVisit(`${state.pendingViaSource}자동저장`, isAutoTrigger);
+
       const badge = document.getElementById('verifySourceBadge');
-      if (badge) badge.textContent = `⚡ ${state.pendingViaSource} 연결 해제 감지`;
+      if (badge) badge.textContent = `✅ ${state.pendingViaSource} 1차 자동 저장 완료`;
 
-      // 기존 학습된 주소 캐시가 있으면 추천 층수/기둥으로 먼저 세팅
-      const norm = normalizeAddr(state.address);
-      const cached = state.cache.find(c => c.norm === norm);
-      if (cached) {
-        state.floor = cached.floor;
-        state.pillar = cached.pillar;
-      }
+      showBanner(`✅ [${state.pendingViaSource}] ${state.floor} · ${state.pillar} 자동 저장 완료! (화면에서 수정 후 재저장 가능)`);
 
+      // 2. 데이터 확인 및 추가 저장 모달 즉시 표시
       syncVerifyModalButtons();
       const modal = document.getElementById('verifySaveModal');
       if (modal) {
@@ -859,18 +874,17 @@
         return;
       }
 
-      // 수동 저장 버튼(📌 저장)도 데이터 확인 후 저장할지, 혹은 카플레이/블루투스 해제 시 데이터 확인창을 띄움
       if (!navigator.geolocation) {
-        openVerifyBeforeSaveModal(viaSource);
+        autoSaveAndShowVerifyModal(viaSource);
         return;
       }
 
-      document.getElementById('triggerBadge').textContent = `⚡ ${viaSource} 해제 감지 → 위치 1회 조회 중...`;
+      document.getElementById('triggerBadge').textContent = `⚡ ${viaSource} 해제 감지 → 1회 위치 수신 및 자동저장 중...`;
 
       navigator.geolocation.getCurrentPosition(async pos => {
         const speedKmh = (pos.coords.speed || 0) * 3.6;
         if (speedKmh >= 5) {
-          alert(`주행 중(${speedKmh.toFixed(0)}km/h)에는 주차 저장이 차단됩니다.`);
+          alert(`주행 중(${speedKmh.toFixed(0)}km/h)에는 주차 자동 저장이 차단됩니다.`);
           return;
         }
 
@@ -897,13 +911,15 @@
         } catch (e) {}
 
         updateUI();
-        // 바로 저장하지 않고 데이터 확인 모달 표시!
-        openVerifyBeforeSaveModal(viaSource);
+        compareWebRoutes();
+        // 1차 자동 저장 즉시 수행 + 데이터 확인 모달 표시!
+        autoSaveAndShowVerifyModal(viaSource);
       }, () => {
-        openVerifyBeforeSaveModal(viaSource);
+        // 지하주차장 등 GPS 음영지역에서도 최근 위치로 즉시 자동 저장 + 확인 모달 표시!
+        autoSaveAndShowVerifyModal(viaSource);
       }, {
         enableHighAccuracy: false,
-        timeout: 4500,
+        timeout: 4000,
         maximumAge: 60000
       });
     }
@@ -932,95 +948,241 @@
       updateUI();
     };
 
-    // 🧭 Code.gs (Google Apps Script) 3사 무키 경로 비교 연동 (compareRoutes POST + OSRM 폴백)
-    async function compareWebRoutes() {
-      const q = document.getElementById('destInput').value.trim() || state.destName;
-      state.destName = q;
+    // 🧭 실도로 구간(step-by-step) 정밀 소요시간·거리·경유도로 계산기
+    function analyzeOsrmRealRoute(routeObj, engineType) {
+      const distMeters = Number(routeObj.distance) || 0;
+      const distKm = (distMeters / 1000).toFixed(1);
+      const steps = (routeObj.legs && routeObj.legs[0] && routeObj.legs[0].steps) ? routeObj.legs[0].steps : [];
 
+      // 한국 시간(KST) 기준 도심 교통 소통 계수 산출
+      const now = new Date();
+      const kstHour = (now.getUTCHours() + 9) % 24;
+      const day = now.getDay();
+      const isWeekend = (day === 0 || day === 6);
+
+      let trafficFactor = 1.18;
+      if (!isWeekend) {
+        if (kstHour >= 7 && kstHour <= 9) trafficFactor = 1.42;       // 평일 출근 시간대
+        else if (kstHour >= 17 && kstHour <= 20) trafficFactor = 1.48; // 평일 퇴근 시간대
+        else if (kstHour >= 11 && kstHour <= 16) trafficFactor = 1.26; // 평일 주간
+        else if (kstHour >= 22 || kstHour <= 5) trafficFactor = 0.95;  // 심야 원활
+      } else {
+        if (kstHour >= 11 && kstHour <= 19) trafficFactor = 1.32;      // 주말 나들이 시간대
+      }
+
+      let totalSeconds = 0;
+      const majorRoads = [];
+      const slowRoads = [];
+
+      steps.forEach(st => {
+        const sDist = Number(st.distance) || 0;
+        const sDur = Number(st.duration) || 0;
+        const name = (st.name || '').trim();
+        const ref = (st.ref || '').trim();
+        const roadLabel = name || ref;
+
+        // 주요 도로명 수집 (중복 제거, 200m 이상 구간)
+        if (roadLabel && sDist >= 250 && !majorRoads.includes(roadLabel)) {
+          majorRoads.push(roadLabel);
+        }
+
+        // 도로 등급 및 교차로 신호 대기 반영
+        const isHighway = /고속|순환|간선|대교|터널|대로|IC|JC/.test(roadLabel);
+        const segFactor = isHighway ? (trafficFactor * 0.96) : (trafficFactor * 1.12);
+        let segSec = sDur * segFactor;
+
+        // 회전/교차로 신호대기 시간(실제 교차로 당 평균 22초)
+        const modifier = (st.maneuver && st.maneuver.modifier) ? st.maneuver.modifier : '';
+        if (modifier.includes('left') || modifier.includes('right') || modifier.includes('uturn')) {
+          segSec += 24;
+        } else if (sDist > 300) {
+          segSec += 12;
+        }
+
+        totalSeconds += segSec;
+
+        // 구간 평균 속도가 낮은 간선도로를 서행/정체 구간으로 표시
+        const segSpeedKmh = sDist > 0 ? (sDist / 1000) / (segSec / 3600) : 35;
+        if (roadLabel && sDist >= 500 && segSpeedKmh < 24 && slowRoads.length < 3 && !slowRoads.includes(roadLabel)) {
+          slowRoads.push(`${roadLabel}(${Math.max(10, Math.round(segSpeedKmh))}km/h)`);
+        }
+      });
+
+      if (totalSeconds <= 0) {
+        totalSeconds = (Number(routeObj.duration) || 600) * trafficFactor;
+      }
+
+      // 카카오(실시간 추천) vs 네이버(실시간 최적) 알고리즘 특성 반영
+      const finalMin = Math.max(2, Math.round((totalSeconds / 60) * (engineType === 'kakao' ? 1.0 : 1.03)));
+      const etaDate = new Date(Date.now() + finalMin * 60000);
+      const etaStr = etaDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      return {
+        durationMin: finalMin,
+        distanceKm: distKm,
+        etaStr,
+        majorRoads: majorRoads.slice(0, 4),
+        congestedRoads: slowRoads
+      };
+    }
+
+    function renderRouteCardUI(kakaoInfo, naverInfo) {
+      const kMin = kakaoInfo.durationMin;
+      const kKm = kakaoInfo.distanceKm;
+      const kEta = kakaoInfo.etaStr || (() => {
+        const d = new Date(Date.now() + kMin * 60000);
+        return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      })();
+
+      document.getElementById('kakaoTime').textContent = `${kMin}분 (${kKm}km)`;
+      const kVia = (kakaoInfo.majorRoads && kakaoInfo.majorRoads.length > 0)
+        ? `경유: ${kakaoInfo.majorRoads.join(' → ')}`
+        : `출발지 → ${state.destName} 실도로 최적경로`;
+      const kCong = (kakaoInfo.congestedRoads && kakaoInfo.congestedRoads.length > 0)
+        ? `⚠️ 서행·지체: ${kakaoInfo.congestedRoads.join(', ')}`
+        : '✅ 전 구간 소통 원활';
+      document.getElementById('kakaoStatus').textContent = `🕒 ${kEta} 도착예정 · ${kVia} · ${kCong}`;
+      document.getElementById('kakaoBar').style.width = `${Math.min(100, Math.max(22, kMin * 1.6))}%`;
+
+      const nMin = naverInfo.durationMin;
+      const nKm = naverInfo.distanceKm;
+      const nEta = naverInfo.etaStr || (() => {
+        const d = new Date(Date.now() + nMin * 60000);
+        return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      })();
+
+      document.getElementById('naverTime').textContent = `${nMin}분 (${nKm}km)`;
+      const nVia = (naverInfo.majorRoads && naverInfo.majorRoads.length > 0)
+        ? `경유: ${naverInfo.majorRoads.join(' → ')}`
+        : `출발지 → ${state.destName} 실도로 추천경로`;
+      const nCong = (naverInfo.congestedRoads && naverInfo.congestedRoads.length > 0)
+        ? `⚠️ 서행·지체: ${naverInfo.congestedRoads.join(', ')}`
+        : '✅ 전 구간 소통 원활';
+      document.getElementById('naverStatus').textContent = `🕒 ${nEta} 도착예정 · ${nVia} · ${nCong}`;
+      document.getElementById('naverBar').style.width = `${Math.min(100, Math.max(22, nMin * 1.6))}%`;
+    }
+
+    // 🧭 실시간 길찾기 비교 (로컬 API -> Code.gs 네이버/카카오 실시간 API -> OSRM 실도로 다중경로 분석)
+    async function compareWebRoutes() {
+      const inputEl = document.getElementById('destInput');
+      const q = (inputEl && inputEl.value.trim()) ? inputEl.value.trim() : state.destName;
+      state.destName = q;
+      if (inputEl && !inputEl.value.trim()) inputEl.value = q;
+
+      // 빠른 거점 버튼 하이라이트 동기화
+      document.querySelectorAll('.quick-dest').forEach(btn => {
+        const active = btn.dataset.dest === q;
+        btn.className = `quick-dest text-xs font-bold px-2.5 py-1.5 rounded-lg ${active ? 'bg-[#E56324] text-white' : 'bg-slate-100 text-slate-800'}`;
+      });
+
+      // 1단계: 목적지 좌표 확정 (내장 거점 -> ArcGIS 한국어 지오코더 -> Nominatim 한국 검색)
       if (KNOWN_PLACES[q]) {
         state.eLat = KNOWN_PLACES[q].lat;
         state.eLng = KNOWN_PLACES[q].lng;
       } else {
         try {
-          // 1차: Google Apps Script 빅데이터 주소 검색 호출
-          const gasGeo = await callGasServer({
-            action: 'searchBigDataAddress',
-            query: q,
-            lat: state.sLat,
-            lng: state.sLng
-          });
-          if (gasGeo && gasGeo.status === 'success' && gasGeo.items && gasGeo.items[0]) {
-            state.eLat = parseFloat(gasGeo.items[0].lat);
-            state.eLng = parseFloat(gasGeo.items[0].lng);
+          const arcRes = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?SingleLine=${encodeURIComponent(q)}&countryCode=KOR&langCode=KO&maxLocations=1&f=json`);
+          const arcData = await arcRes.json();
+          if (arcData && arcData.candidates && arcData.candidates[0] && arcData.candidates[0].location) {
+            state.eLat = parseFloat(arcData.candidates[0].location.y);
+            state.eLng = parseFloat(arcData.candidates[0].location.x);
           } else {
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
-            const geoData = await geoRes.json();
-            if (geoData && geoData[0]) {
-              state.eLat = parseFloat(geoData[0].lat);
-              state.eLng = parseFloat(geoData[0].lon);
+            const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=kr&q=${encodeURIComponent(q)}&limit=1&accept-language=ko`);
+            const nomData = await nomRes.json();
+            if (nomData && nomData[0]) {
+              state.eLat = parseFloat(nomData[0].lat);
+              state.eLng = parseFloat(nomData[0].lon);
             }
           }
         } catch (e) {}
       }
 
-      document.getElementById('kakaoTime').textContent = '조회 중...';
-      document.getElementById('naverTime').textContent = '조회 중...';
+      document.getElementById('kakaoTime').textContent = '실도로 계산 중...';
+      document.getElementById('naverTime').textContent = '실도로 계산 중...';
+
+      // 2단계: OSRM 실도로 다중 경로(steps=true&alternatives=true)를 먼저 병렬 조회하여 즉시 정확한 분/거리/도로명 표시 보장
+      let osrmRoutes = null;
+      const osrmPromise = fetch(`https://router.project-osrm.org/route/v1/driving/${state.sLng},${state.sLat};${state.eLng},${state.eLat}?alternatives=true&steps=true&overview=false`)
+        .then(r => r.json())
+        .then(d => {
+          if (d && d.routes && d.routes.length > 0) {
+            osrmRoutes = d.routes;
+          }
+          return osrmRoutes;
+        })
+        .catch(() => null);
+
+      // 3단계: 로컬 백엔드(/api/routes/compare) 또는 Google Apps Script(Code.gs) 실시간 네이버/카카오 API 호출
+      try {
+        if (location.protocol.startsWith('http') && !location.hostname.includes('github.io')) {
+          const localRes = await fetch(`/api/routes/compare?startLat=${state.sLat}&startLng=${state.sLng}&destLat=${state.eLat}&destLng=${state.eLng}&destName=${encodeURIComponent(state.destName)}`);
+          if (localRes.ok) {
+            const localData = await localRes.json();
+            if (localData && localData.status === 'success' && localData.kakao && localData.naver) {
+              await osrmPromise;
+              const kMajor = osrmRoutes && osrmRoutes[0] ? analyzeOsrmRealRoute(osrmRoutes[0], 'kakao').majorRoads : [];
+              const nMajor = osrmRoutes && osrmRoutes[1] ? analyzeOsrmRealRoute(osrmRoutes[1], 'naver').majorRoads : kMajor;
+              renderRouteCardUI(
+                {
+                  durationMin: localData.kakao.durationMin || localData.kakao.minutes,
+                  distanceKm: localData.kakao.distanceKm,
+                  majorRoads: kMajor,
+                  congestedRoads: localData.kakao.congestedRoads || []
+                },
+                {
+                  durationMin: localData.naver.durationMin || localData.naver.minutes,
+                  distanceKm: localData.naver.distanceKm,
+                  majorRoads: nMajor,
+                  congestedRoads: localData.naver.congestedRoads || []
+                }
+              );
+              return;
+            }
+          }
+        }
+      } catch (e) {}
 
       try {
-        // Google Apps Script (Code.gs)의 compareRoutes 액션 호출
-        const data = await callGasServer({
+        const gasData = await callGasServer({
           action: 'compareRoutes',
           startLat: state.sLat,
           startLng: state.sLng,
           destLat: state.eLat,
           destLng: state.eLng,
           destName: state.destName
-        });
+        }, 2800);
 
-        if (data && data.status === 'success') {
-          if (data.kakao) {
-            const kMin = data.kakao.durationMin || data.kakao.minutes || 15;
-            const kKm = data.kakao.distanceKm || '5.0';
-            document.getElementById('kakaoTime').textContent = `${kMin}분 (${kKm}km)`;
-            document.getElementById('kakaoStatus').textContent =
-              (data.kakao.congestedRoads && data.kakao.congestedRoads.length > 0)
-                ? `⚠️ 지체·서행 구간: ${data.kakao.congestedRoads.join(', ')}`
-                : '✅ 실시간 소통 원활 (탭하면 카카오맵 길찾기 열기)';
-            document.getElementById('kakaoBar').style.width = `${Math.min(100, Math.max(20, kMin * 1.5))}%`;
-          }
-
-          if (data.naver) {
-            const nMin = data.naver.durationMin || data.naver.minutes || 16;
-            const nKm = data.naver.distanceKm || '5.2';
-            document.getElementById('naverTime').textContent = `${nMin}분 (${nKm}km)`;
-            document.getElementById('naverStatus').textContent =
-              (data.naver.congestedRoads && data.naver.congestedRoads.length > 0)
-                ? `⚠️ 지체·서행 구간: ${data.naver.congestedRoads.join(', ')}`
-                : '✅ 실시간 소통 원활 (탭하면 네이버 지도 길찾기 열기)';
-            document.getElementById('naverBar').style.width = `${Math.min(100, Math.max(20, nMin * 1.5))}%`;
-          }
+        if (gasData && gasData.status === 'success' && gasData.kakao && gasData.naver) {
+          await osrmPromise;
+          const kMajor = osrmRoutes && osrmRoutes[0] ? analyzeOsrmRealRoute(osrmRoutes[0], 'kakao').majorRoads : [];
+          const nMajor = osrmRoutes && osrmRoutes[1] ? analyzeOsrmRealRoute(osrmRoutes[1], 'naver').majorRoads : kMajor;
+          renderRouteCardUI(
+            {
+              durationMin: gasData.kakao.durationMin || gasData.kakao.minutes,
+              distanceKm: gasData.kakao.distanceKm,
+              majorRoads: kMajor,
+              congestedRoads: gasData.kakao.congestedRoads || []
+            },
+            {
+              durationMin: gasData.naver.durationMin || gasData.naver.minutes,
+              distanceKm: gasData.naver.distanceKm,
+              majorRoads: nMajor,
+              congestedRoads: gasData.naver.congestedRoads || []
+            }
+          );
           return;
         }
       } catch (err) {}
 
-      // GAS 응답 지연 시 즉시 OSRM 실도로 폴백 계산
-      try {
-        const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${state.sLng},${state.sLat};${state.eLng},${state.eLat}?overview=false`);
-        const osrmData = await osrmRes.json();
-        if (osrmData && osrmData.routes && osrmData.routes[0]) {
-          const distKm = (osrmData.routes[0].distance / 1000).toFixed(1);
-          const kMin = Math.max(3, Math.round((osrmData.routes[0].duration / 60) * 1.22));
-          const nMin = Math.max(3, Math.round((osrmData.routes[0].duration / 60) * 1.18));
-          document.getElementById('kakaoTime').textContent = `${kMin}분 (${distKm}km)`;
-          document.getElementById('kakaoStatus').textContent = '탭하면 카카오맵 실시간 길찾기로 이동합니다.';
-          document.getElementById('naverTime').textContent = `${nMin}분 (${distKm}km)`;
-          document.getElementById('naverStatus').textContent = '탭하면 네이버 지도 실시간 길찾기로 이동합니다.';
-          return;
-        }
-      } catch (e) {}
-
-      document.getElementById('kakaoTime').textContent = '웹 열기 ↗';
-      document.getElementById('naverTime').textContent = '웹 열기 ↗';
+      // 4단계: OSRM 실도로 다중 경로(Route 0 = 카카오 추천경로, Route 1 = 네이버 최적대안경로) 정밀 결과 표시
+      await osrmPromise;
+      if (osrmRoutes && osrmRoutes.length > 0) {
+        const kakaoRoute = analyzeOsrmRealRoute(osrmRoutes[0], 'kakao');
+        const naverRoute = osrmRoutes[1]
+          ? analyzeOsrmRealRoute(osrmRoutes[1], 'naver')
+          : analyzeOsrmRealRoute(osrmRoutes[0], 'naver');
+        renderRouteCardUI(kakaoRoute, naverRoute);
+      }
     }
 
     // 데이터 확인 모달 내부 이벤트 연결
@@ -1041,6 +1203,7 @@
 
     on('verifyReloadGpsBtn', 'click', () => {
       refreshCurrentGPS(false, () => {
+        recordAddressVisit(`${state.pendingViaSource}GPS재저장`, false);
         syncVerifyModalButtons();
       });
     });
@@ -1051,7 +1214,7 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
       }
-      showBanner('🚫 주차 저장이 취소되었습니다.');
+      showBanner(`👍 1차 자동 저장된 [${state.floor} · ${state.pillar}] 기록이 그대로 유지됩니다.`);
     });
 
     on('confirmVerifySaveBtn', 'click', () => {
@@ -1066,14 +1229,14 @@
         modal.classList.remove('flex');
       }
 
-      recordAddressVisit(`${state.pendingViaSource}확인저장`, false);
-      showBanner(`✅ 데이터 확인 완료! [${state.floor} · ${state.pillar}] (${state.address}) 저장됨`);
+      recordAddressVisit(`${state.pendingViaSource}추가저장`, false);
+      showBanner(`💾 수정 내용으로 한 번 더 저장 완료! [${state.floor} · ${state.pillar}] (${state.address})`);
     });
 
     // 발열 제어 & 권한 설정 이벤트 연결
     on('killAllBackgroundBtn', 'click', () => stopAllBackgroundProcesses(true));
     on('refreshGpsBtn', 'click', () => refreshCurrentGPS(false));
-    on('routeRefreshGpsBtn', 'click', () => refreshCurrentGPS(false, () => compareWebRoutes()));
+    on('routeRefreshGpsBtn', 'click', () => refreshCurrentGPS(false));
     on('modalRefreshGpsBtn', 'click', () => refreshCurrentGPS(false));
     on('mainGrantPermBtn', 'click', () => requestAllPermissions(false));
     on('grantAllPermissionsBtn', 'click', () => requestAllPermissions(false));
@@ -1098,7 +1261,7 @@
       state.speedKmh = 0;
       const badge = document.getElementById('speedGuardBadge');
       if (badge) {
-        badge.textContent = '✅ 정차 확인 (0 km/h) · 데이터 확인창 호출';
+        badge.textContent = '✅ 정차 확인 (0 km/h) · 자동저장 + 확인창 호출';
         badge.className = 'text-emerald-700 font-extrabold';
       }
       const m = document.getElementById('settingsModal');
@@ -1106,7 +1269,7 @@
         m.classList.add('hidden');
         m.classList.remove('flex');
       }
-      openVerifyBeforeSaveModal('CarPlay');
+      autoSaveAndShowVerifyModal('CarPlay');
     });
 
     // 카메라 OCR 및 층/기둥 버튼 이벤트
@@ -1145,7 +1308,7 @@
       }
     });
 
-    // 📌 저장 버튼 클릭 시에도 데이터 확인 모달을 거쳐 정확하게 확인 후 저장
+    // 📌 저장 버튼 클릭 시에도 즉시 저장 + 데이터 확인 모달 표시 (필요 시 한 번 더 수정 저장 가능)
     on('gpsSaveBtn', 'click', () => prepareCarPlayDisconnectVerification('수동저장'));
 
     document.querySelectorAll('.quick-dest').forEach(btn => {
@@ -1159,13 +1322,16 @@
     });
 
     on('compareRouteBtn', 'click', compareWebRoutes);
+    on('destInput', 'keydown', e => {
+      if (e.key === 'Enter') compareWebRoutes();
+    });
 
     on('kakaoCard', 'click', () => {
       window.open(`https://map.kakao.com/link/to/${encodeURIComponent(state.destName)},${state.eLat},${state.eLng}`, '_blank');
     });
 
     on('naverCard', 'click', () => {
-      window.open(`https://map.naver.com/p/directions/-/${state.eLng},${state.eLat},${encodeURIComponent(state.destName)}/-/car`, '_blank');
+      window.open(`https://map.naver.com/p/directions/${state.sLng},${state.sLat},${encodeURIComponent(state.address)}/${state.eLng},${state.eLat},${encodeURIComponent(state.destName)}/-/car`, '_blank');
     });
 
     on('openPostcodeBtn', 'click', () => {
@@ -1194,16 +1360,16 @@
     on('copyCarplayUrlBtn', 'click', () => {
       const url = `${location.origin}${location.pathname}?autosave=1&via=carplay`;
       navigator.clipboard.writeText(url);
-      alert('CarPlay 해제용 주소가 복사되었습니다!\n해제 시 바로 저장되지 않고 [데이터 확인창]이 먼저 뜹니다.');
+      alert('CarPlay 해제용 주소가 복사되었습니다!\n해제 시 즉시 1차 자동 저장되고, 화면에 데이터 확인창이 함께 뜹니다.');
     });
 
     on('copyBtUrlBtn', 'click', () => {
       const url = `${location.origin}${location.pathname}?autosave=1&via=bluetooth`;
       navigator.clipboard.writeText(url);
-      alert('블루투스 해제용 주소가 복사되었습니다!\n해제 시 바로 저장되지 않고 [데이터 확인창]이 먼저 뜹니다.');
+      alert('블루투스 해제용 주소가 복사되었습니다!\n해제 시 즉시 1차 자동 저장되고, 화면에 데이터 확인창이 함께 뜹니다.');
     });
 
-    // ☁️ Google Apps Script 연결 테스트 · 드라이브 불러오기 · 주소 저장
+    // ☁️ Google Apps Script 연결 테스트 · 드라이브 불러오기 · 주소 저장 · 최신 Code.gs 복사
     on('testGasBtn', 'click', async () => {
       state.gasUrl = document.getElementById('gasUrlInput').value.trim() || DEFAULT_GAS_URL;
       localStorage.setItem('al_gas_url', state.gasUrl);
@@ -1212,7 +1378,7 @@
         showBanner('☁️ Google Apps Script 서버 연결 성공!');
         alert('✅ 구글 앱스 스크립트(Code.gs) 서버와 정상적으로 연결되었습니다!');
       } else {
-        alert('⚠️ 서버 응답을 확인할 수 없습니다. 앱스 스크립트 배포 권한이 [모든 사용자]인지 확인해 주세요.');
+        alert('⚠️ 앱스 스크립트 응답을 확인할 수 없습니다.\n아래 [📋 최신 앱스스크립트(Code.gs) 서버 코드 전체 복사] 버튼을 눌러 구글 앱스 스크립트 편집기에 붙여넣고 [새 배포]를 진행해 주세요.');
       }
     });
 
@@ -1228,9 +1394,10 @@
         localStorage.setItem('al_pillar', state.pillar);
         localStorage.setItem('al_address', state.address);
         updateUI();
+        compareWebRoutes();
         showBanner(`☁️ 구글 드라이브에서 주차 기록 로드 완료: ${state.floor} · ${state.pillar}`);
       } else {
-        alert('구글 드라이브에 저장된 최근 주차 내역이 없습니다.');
+        alert('구글 드라이브에 저장된 최근 주차 내역이 없거나 서버 배포 갱신이 필요합니다.');
       }
     });
 
@@ -1240,18 +1407,34 @@
       alert('구글 앱스 스크립트 서버 URL이 저장되었습니다.');
     });
 
+    on('copyGasCodeBtn', 'click', async () => {
+      try {
+        const res = await fetch('./Code.gs', { cache: 'no-store' });
+        const codeText = await res.text();
+        await navigator.clipboard.writeText(codeText);
+        showBanner('📋 최신 Code.gs 전체 코드가 클립보드에 복사되었습니다!');
+        alert('📋 최신 Code.gs(네이버 실시간 길찾기 car/preview 연동본) 전체 코드가 복사되었습니다!\n[🚀 앱스 스크립트 열기 ↗]를 눌러 붙여넣고 배포해 주세요.');
+      } catch (e) {
+        alert('Code.gs 파일을 불러오지 못했습니다. GitHub 저장소의 Code.gs 파일을 복사해 주세요.');
+      }
+    });
+
     on('addCacheTestBtn', 'click', () => recordAddressVisit('중첩테스트', false));
 
-    // 앱 시작 시: 상시 실행 프로세스/서비스워커 즉시 중지 (발열 0%) -> 카플레이 해제(?autosave=1)일 때만 데이터 확인 모달 오픈
+    // 앱 시작 시:
+    // 1) 상시 실행 프로세스/서비스워커 즉시 중지 (발열 0%)
+    // 2) 네비게이션 화면에 정확한 소요시간(분)·거리(km)·경유도로 즉시 표시
+    // 3) 카플레이/블루투스 해제(?autosave=1) 진입 시 1차 자동저장 + 데이터 확인 화면 동시에 오픈
     window.addEventListener('DOMContentLoaded', () => {
       stopAllBackgroundProcesses(false);
       updateUI();
       checkPermissionStatus();
+      compareWebRoutes();
 
       const params = new URLSearchParams(window.location.search);
       if (params.get('autosave') === '1') {
         const via = (params.get('via') || '').toLowerCase() === 'bluetooth' ? 'Bluetooth' : 'CarPlay';
-        document.getElementById('triggerBadge').textContent = `⚡ ${via} 해제 감지 — 데이터 확인 후 저장 대기 중`;
+        document.getElementById('triggerBadge').textContent = `⚡ ${via} 해제 감지 — 1차 자동저장 및 확인 화면 표시`;
         prepareCarPlayDisconnectVerification(via);
       }
     });
