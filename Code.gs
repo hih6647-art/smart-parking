@@ -25,13 +25,51 @@ function setupAutoLinkParking() {
 }
 
 function doGet(e) {
-  var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : "ping";
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action || "ping";
+
   if (action === "loadParking") {
     return createJsonResponse(handleLoadParkingObj_());
   }
+  if (action === "saveParking" || action === "saveToDrive") {
+    return createJsonResponse(handleSaveToDriveObj_({
+      vehicleName: params.vehicleName || "내 차량",
+      vehiclePlate: params.vehiclePlate || params.via || "",
+      floor: params.floor || "B1",
+      zone: params.pillar || params.zone || "A-01",
+      address: params.address || "",
+      lat: Number(params.lat || params.sLat || 37.5665),
+      lng: Number(params.lng || params.sLng || 126.9780)
+    }));
+  }
+  if (action === "route" || action === "compareRoutes") {
+    var cmp = handleGasKeyless3NavCompare_({
+      startLat: Number(params.sLat || params.startLat || 37.5665),
+      startLng: Number(params.sLng || params.startLng || 126.9780),
+      destLat: Number(params.eLat || params.destLat || 37.497952),
+      destLng: Number(params.eLng || params.destLng || 127.027619),
+      destName: params.destName || "목적지"
+    });
+    if (cmp && cmp.kakao) {
+      cmp.kakao.ok = true;
+      cmp.kakao.minutes = cmp.kakao.durationMin;
+      cmp.kakao.statusText = (cmp.kakao.congestedRoads && cmp.kakao.congestedRoads.length > 0)
+        ? ("⚠️ 지체·서행: " + cmp.kakao.congestedRoads.join(", "))
+        : "✅ 실시간 소통 원활 (탭하면 카카오맵 열기)";
+    }
+    if (cmp && cmp.naver) {
+      cmp.naver.ok = true;
+      cmp.naver.minutes = cmp.naver.durationMin;
+      cmp.naver.statusText = (cmp.naver.congestedRoads && cmp.naver.congestedRoads.length > 0)
+        ? ("⚠️ 지체·서행: " + cmp.naver.congestedRoads.join(", "))
+        : "✅ 실시간 소통 원활 (탭하면 네이버 지도 열기)";
+    }
+    return createJsonResponse(cmp);
+  }
+
   return createJsonResponse({
     status: "success",
-    service: "AutoLink Parking v2.7 GAS 3-Nav Keyless + Bluelink PIN Backend",
+    service: "AutoLink Parking v2.8 GAS 3-Nav Keyless + Bluelink PIN Backend",
     time: new Date().toISOString()
   });
 }
